@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Shore</title>
 <style>
   :root {
@@ -339,6 +339,10 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
+  }
+
+  .mobile-deck-tabs {
+    display: none;
   }
 
   .deck-state {
@@ -1175,15 +1179,17 @@
       overflow-y: auto;
       overscroll-behavior-y: contain;
       touch-action: pan-y;
+      background: #061014;
     }
     body {
       display: block;
       min-height: 100%;
-      padding: 8px;
+      padding: max(6px, env(safe-area-inset-top)) 7px calc(78px + env(safe-area-inset-bottom));
       overflow-x: hidden;
       overflow-y: auto;
       touch-action: pan-y;
       -webkit-overflow-scrolling: touch;
+      background: #061014;
     }
     .game-shell {
       width: 100%;
@@ -1191,18 +1197,15 @@
       overflow: visible;
     }
     .stage-wrap {
-      height: 52svh;
-      min-height: 400px;
+      height: 54svh;
+      min-height: 380px;
       touch-action: pan-y;
       transition: height .28s ease;
     }
     .stage-wrap canvas { touch-action: pan-y; }
-    body.phase-locked .stage-wrap,
-    body.phase-live .stage-wrap,
-    body.phase-resolution .stage-wrap {
-      height: 72svh;
-      min-height: 520px;
-    }
+    body.phase-locked .stage-wrap { height: 64svh; min-height: 450px; }
+    body.phase-live .stage-wrap { height: 78svh; min-height: 540px; }
+    body.phase-resolution .stage-wrap { height: 66svh; min-height: 470px; }
     .side-lower > .status-panel { display: none; }
     #crowdToggle { display: block; }
     #crowdToggle {
@@ -1244,6 +1247,90 @@
       max-height: none;
       overflow: visible;
       touch-action: pan-y;
+    }
+    .mobile-deck-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 6px 8px 0;
+    }
+    .mobile-deck-tabs button {
+      min-height: 34px;
+      border: 1px solid rgba(91, 192, 224, .24);
+      background: rgba(4, 28, 45, .7);
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .mobile-deck-tabs button.active {
+      border-color: rgba(81, 215, 239, .58);
+      background: rgba(24, 99, 116, .52);
+      color: var(--text);
+    }
+    .control-panel.deck-committed .mobile-deck-tabs {
+      grid-template-columns: 1fr;
+    }
+    .control-panel.deck-committed #mobileMainTab {
+      display: none;
+    }
+    body.phase-live .control-panel,
+    body.phase-resolution .control-panel {
+      display: none;
+    }
+    body.phase-live .side-lower,
+    body.phase-resolution .side-lower {
+      margin-top: 8px;
+    }
+    .control-panel.mobile-crowd-tab .main-field,
+    .control-panel.mobile-crowd-tab .room-field,
+    .control-panel.mobile-crowd-tab .main-actions,
+    .control-panel.mobile-crowd-tab .ticket {
+      display: none;
+    }
+    .control-panel.mobile-crowd-tab .crowd-bets {
+      display: grid;
+      border-top: 0;
+      padding-top: 0;
+    }
+    .control-panel.mobile-crowd-tab .crowd-body {
+      display: grid;
+      max-height: none;
+      margin-top: 6px;
+      opacity: 1;
+      overflow: visible;
+    }
+    .control-panel:not(.mobile-crowd-tab) .crowd-bets {
+      display: none;
+    }
+    .room-field,
+    .control-panel:not(.deck-committed) .ticket {
+      display: none;
+    }
+    .control-panel .controls {
+      gap: 6px;
+      padding: 7px 8px 9px;
+    }
+    .control-panel .main-actions {
+      margin: 1px 0 0;
+    }
+    .control-panel .main-actions button {
+      min-height: 48px;
+    }
+    .panel-head {
+      padding: 8px 10px;
+    }
+    .panel-head strong { font-size: 11px; }
+    .deck-state {
+      gap: 5px;
+    }
+    .deck-state > strong {
+      display: none;
+    }
+    .control-panel .deck-state > .status-pill {
+      display: none;
+    }
+    .status-pill {
+      padding: 3px 7px;
+      font-size: 9px;
     }
     body.phase-locked .control-panel .main-field,
     body.phase-locked .control-panel .room-field,
@@ -1306,63 +1393,74 @@
       display: none;
     }
     .topbar {
-      top: 8px;
-      left: 8px;
+      top: 6px;
+      left: 6px;
       right: auto;
-      width: 132px;
+      width: 108px;
       justify-content: flex-start;
     }
     .brand { display: none; }
     .multiplier {
-      width: 132px;
+      width: 108px;
       min-width: 0;
       box-sizing: border-box;
-      padding: 5px 14px 7px;
+      padding: 4px 6px 6px;
       text-align: center;
     }
-    .multiplier .label { font-size: 8px; }
-    .multiplier .value { font-size: 34px; }
+    .multiplier .label { font-size: 7px; }
+    .multiplier .value { font-size: 29px; }
     .threat-banner {
-      top: 8px;
-      left: 148px;
-      right: 8px;
+      top: 6px;
+      left: 120px;
+      right: 6px;
       min-width: 0;
-      min-height: 57px;
+      min-height: 48px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 5px 10px 7px;
+      padding: 4px 8px 5px;
     }
     .threat-banner span {
       display: block;
       text-align: center;
-      font-size: 8px;
+      font-size: 7px;
     }
     .threat-banner strong {
       text-align: center;
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
     }
     .betbar {
-      left: 8px;
-      right: 8px;
-      bottom: 8px;
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 5px;
+      gap: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(6, 24, 31, .84);
+      backdrop-filter: blur(10px);
     }
     .betbar .metric {
-      min-height: 42px;
-      padding: 5px 7px;
+      min-height: 38px;
+      padding: 4px 7px;
+      border: 0;
+      border-right: 1px solid rgba(139, 205, 218, .15);
+      border-radius: 0;
+      background: transparent;
+      backdrop-filter: none;
     }
+    .betbar .metric:last-child { border-right: 0; }
     .betbar .metric:nth-child(3) { display: none; }
     .metric span { font-size: 8px; }
-    .metric strong { margin-top: 1px; font-size: 14px; }
-    body.phase-live.player-active .betbar { bottom: 72px; }
+    .metric strong { margin-top: 0; font-size: 13px; }
+    body.phase-live.player-active .betbar { bottom: 66px; }
     .mobile-cashout { display: none; }
     body.phase-live.player-active .mobile-cashout { display: flex; }
     .mobile-cashout {
-      padding: 8px;
+      padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
       background: rgba(3, 20, 31, .94);
     }
     .mobile-cashout .mobile-mult {
@@ -1370,8 +1468,53 @@
       font-size: 24px;
     }
     .mobile-cashout button {
-      min-height: 48px;
+      min-height: 46px;
       font-size: 13px;
+    }
+    .round-toast {
+      min-width: min(280px, calc(100% - 44px));
+      padding: 14px 18px;
+    }
+    .round-toast strong { font-size: 21px; }
+    .result-card {
+      padding: max(12px, env(safe-area-inset-top)) 12px calc(82px + env(safe-area-inset-bottom));
+    }
+    .result-inner {
+      width: min(320px, calc(100vw - 28px));
+      padding: 22px 20px 18px;
+    }
+    .result-mult {
+      font-size: 44px;
+      margin-bottom: 13px;
+    }
+    .result-history .rh-pill:nth-child(n+6) { display: none; }
+    .side-lower > .panel {
+      display: block;
+    }
+    .side-lower > .panel .panel-head {
+      cursor: pointer;
+    }
+    .side-lower > .panel .panel-head::after {
+      content: "+";
+      margin-left: auto;
+      color: var(--cyan);
+      font: 800 16px/1 "Roboto Mono", monospace;
+    }
+    .side-lower > .panel.mobile-expanded .panel-head::after {
+      content: "−";
+    }
+    .side-lower > .panel:not(.mobile-expanded) > :not(.panel-head) {
+      display: none;
+    }
+    .side-lower > .panel:not(.mobile-expanded) {
+      min-height: 0;
+    }
+    .side-lower > .panel .panel-head .status-pill {
+      margin-left: auto;
+    }
+    body.phase-betting .side-lower,
+    body.phase-locked .side-lower {
+      display: none;
     }
   }
 
@@ -1395,11 +1538,45 @@
 
   @media (max-width: 560px) {
     .multiplier { width: auto; }
-    .controls { grid-template-columns: 1fr; }
-    .stage-wrap { min-height: 400px; }
+    .stage-wrap { min-height: 380px; }
+    body.phase-locked .stage-wrap { min-height: 450px; }
+    body.phase-live .stage-wrap { min-height: 540px; }
+    body.phase-resolution .stage-wrap { min-height: 470px; }
+  }
+
+  @media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+    body {
+      padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+      overflow: hidden;
+    }
+    .game-shell {
+      height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px);
+    }
+    .stage-wrap,
     body.phase-locked .stage-wrap,
     body.phase-live .stage-wrap,
-    body.phase-resolution .stage-wrap { min-height: 520px; }
+    body.phase-resolution .stage-wrap {
+      height: 100%;
+      min-height: 0;
+    }
+    .side {
+      display: none;
+    }
+    .topbar {
+      width: 96px;
+    }
+    .multiplier {
+      width: 96px;
+    }
+    .multiplier .value { font-size: 25px; }
+    .threat-banner {
+      left: 108px;
+      max-width: 250px;
+    }
+    .betbar {
+      right: auto;
+      width: min(330px, calc(100% - 12px));
+    }
   }
 </style>
 </head>
@@ -1454,6 +1631,10 @@
           <span class="status-pill" id="status">OPEN</span>
           <strong id="deckTimer">9.0s</strong>
         </div>
+      </div>
+      <div class="mobile-deck-tabs" role="tablist" aria-label="Betting options">
+        <button class="active" id="mobileMainTab" type="button" role="tab" aria-selected="true">Main Bet</button>
+        <button id="mobileCrowdTab" type="button" role="tab" aria-selected="false">Crowd Bets</button>
       </div>
       <div class="controls">
         <div class="field main-field">
@@ -2350,6 +2531,9 @@ function resetRound() {
   playerThreat = 0;
   crowdBetsManualOpen = false;
   createSwimmers();
+  if (window.matchMedia("(max-width: 900px)").matches && typeof setMobileDeckTab === "function") {
+    setMobileDeckTab("main");
+  }
   ui.toast.classList.remove("show");
   ui.toastTitle.textContent = "SHARK STRIKE";
   setPhase("betting");
@@ -3109,7 +3293,10 @@ function updateParticles() {
 
 function createSweepSharks(targets) {
   const activeTargets = targets.length ? targets : swimmers.filter(p => p.state === "taken" && p.flash > 0).slice(0, 8);
-  const count = Math.max(8, Math.min(16, Math.ceil(activeTargets.length / 2) + 4));
+  const mobile = window.matchMedia("(max-width: 900px)").matches;
+  const count = mobile
+    ? Math.max(5, Math.min(8, Math.ceil(activeTargets.length / 5) + 3))
+    : Math.max(8, Math.min(16, Math.ceil(activeTargets.length / 2) + 4));
   sweepSharks = Array.from({ length: count }, (_, i) => {
     const target = activeTargets[i % activeTargets.length] || { x: shore + (W - shore) * .58, y: H * .62 };
     const waterLeft = shore + 84;
@@ -3288,6 +3475,7 @@ function placeBet() {
   ui.cashOut.disabled = true;
   updateControlDeck();
   if (window.matchMedia("(max-width: 900px)").matches) {
+    setMobileDeckTab("crowd");
     setTimeout(() => ui.controlPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   }
   playTone(440, .08, "triangle", .045);
@@ -3367,6 +3555,12 @@ function updateUi() {
   ui.round.textContent = `${money(exposedStake)} IN WATER`;
   ui.phase.textContent = state.toUpperCase();
   ui.alive.textContent = alive;
+  if (window.matchMedia("(max-width: 900px)").matches && ui.alive.previousElementSibling) {
+    ui.alive.previousElementSibling.textContent = state === "resolution" ? "Taken" : "Players In";
+    if (state === "resolution") ui.alive.textContent = taken;
+  } else if (ui.alive.previousElementSibling) {
+    ui.alive.previousElementSibling.textContent = "Players In";
+  }
   ui.pool.textContent = money(pool);
   ui.timerLabel.textContent = state === "live" ? "Elapsed" : "Timer";
   ui.timer.textContent = state === "live" ? (elapsed / 1000).toFixed(1) + "s" : remain.toFixed(1) + "s";
@@ -3409,8 +3603,9 @@ function frame(now = performance.now()) {
     ctx.rect(0, mobileHudBottom, W, H - mobileHudBottom);
     ctx.clip();
   }
-  swimmers.forEach(p => {
-    if (p.state !== "taken" || p.flash > 0) drawHuman(p);
+  swimmers.forEach((p, index) => {
+    const mobileResolutionCull = mobileHudBottom && state === "resolution" && p.state === "doomed" && index % 3 !== 0;
+    if (!mobileResolutionCull && (p.state !== "taken" || p.flash > 0)) drawHuman(p);
   });
   ctx.save();
   ctx.beginPath();
@@ -3524,7 +3719,34 @@ document.getElementById('resultClose').addEventListener('click', () => {
 // ── Mobile cash out bar ────────────────────────────────────────────────────────
 const mobileCashBtn = document.getElementById('mobileCashBtn');
 const mobileMult    = document.getElementById('mobileMult');
+const mobileMainTab = document.getElementById('mobileMainTab');
+const mobileCrowdTab = document.getElementById('mobileCrowdTab');
 mobileCashBtn.addEventListener('click', () => cashOut(false));
+
+function setMobileDeckTab(tab) {
+  const crowd = tab === 'crowd';
+  ui.controlPanel.classList.toggle('mobile-crowd-tab', crowd);
+  mobileMainTab.classList.toggle('active', !crowd);
+  mobileCrowdTab.classList.toggle('active', crowd);
+  mobileMainTab.setAttribute('aria-selected', crowd ? 'false' : 'true');
+  mobileCrowdTab.setAttribute('aria-selected', crowd ? 'true' : 'false');
+  if (crowd) {
+    crowdBetsManualOpen = true;
+    updateControlDeck();
+  }
+}
+
+mobileMainTab.addEventListener('click', () => setMobileDeckTab('main'));
+mobileCrowdTab.addEventListener('click', () => setMobileDeckTab('crowd'));
+
+document.querySelectorAll('.side-lower > .panel').forEach(panel => {
+  const head = panel.querySelector('.panel-head');
+  if (!head) return;
+  head.addEventListener('click', () => {
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    panel.classList.toggle('mobile-expanded');
+  });
+});
 
 // ── Patch cashOut to record result and show card ───────────────────────────────
 const _origCashOut = cashOut;
