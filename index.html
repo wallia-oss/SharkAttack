@@ -1184,7 +1184,7 @@
     body {
       display: block;
       min-height: 100%;
-      padding: max(6px, env(safe-area-inset-top)) 7px calc(78px + env(safe-area-inset-bottom));
+      padding: max(54px, env(safe-area-inset-top)) 7px calc(78px + env(safe-area-inset-bottom));
       overflow-x: hidden;
       overflow-y: auto;
       touch-action: pan-y;
@@ -1273,7 +1273,8 @@
       display: none;
     }
     body.phase-live .control-panel,
-    body.phase-resolution .control-panel {
+    body.phase-resolution .control-panel,
+    body.phase-locked .control-panel {
       display: none;
     }
     body.phase-live .side-lower,
@@ -1507,7 +1508,26 @@
       display: none;
     }
     .side-lower > .panel:not(.mobile-expanded) {
+      flex: 0 0 auto;
+      height: auto;
       min-height: 0;
+    }
+    .side-lower > .panel:not(.mobile-expanded) .panel-head {
+      border-bottom: 0;
+    }
+    .side-lower > .panel.mobile-expanded {
+      flex: 0 0 auto;
+      height: auto;
+      min-height: 0;
+    }
+    .side-lower > .feed-panel.mobile-expanded .feed {
+      height: auto;
+      max-height: 110px;
+      overflow: hidden;
+    }
+    .side-lower > .swimmers-panel.mobile-expanded .players {
+      max-height: 180px;
+      overflow-y: auto;
     }
     .side-lower > .panel .panel-head .status-pill {
       margin-left: auto;
@@ -1515,6 +1535,10 @@
     body.phase-betting .side-lower,
     body.phase-locked .side-lower {
       display: none;
+    }
+    body.phase-live .side-lower,
+    body.phase-resolution .side-lower {
+      gap: 7px;
     }
   }
 
