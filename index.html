@@ -1393,8 +1393,11 @@
     .round-history {
       display: none;
     }
+    .stage-wrap {
+      scroll-margin-top: max(62px, calc(env(safe-area-inset-top) + 14px));
+    }
     .topbar {
-      top: 6px;
+      top: clamp(14px, 3.2svh, 24px);
       left: 6px;
       right: auto;
       width: 108px;
@@ -1411,7 +1414,7 @@
     .multiplier .label { font-size: 7px; }
     .multiplier .value { font-size: 29px; }
     .threat-banner {
-      top: 6px;
+      top: clamp(14px, 3.2svh, 24px);
       left: 120px;
       right: 6px;
       min-width: 0;
@@ -1457,9 +1460,9 @@
     .betbar .metric:nth-child(3) { display: none; }
     .metric span { font-size: 8px; }
     .metric strong { margin-top: 0; font-size: 13px; }
-    body.phase-live.player-active .betbar { bottom: 66px; }
+    body.phase-live .betbar { bottom: 66px; }
     .mobile-cashout { display: none; }
-    body.phase-live.player-active .mobile-cashout { display: flex; }
+    body.phase-live .mobile-cashout { display: flex; }
     .mobile-cashout {
       padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
       background: rgba(3, 20, 31, .94);
@@ -1471,6 +1474,31 @@
     .mobile-cashout button {
       min-height: 46px;
       font-size: 13px;
+    }
+    body.phase-live:not(.player-active) .mobile-cashout {
+      background: rgba(3, 20, 31, .86);
+    }
+    body.phase-live:not(.player-active) .mobile-cashout button {
+      border-color: rgba(139, 205, 218, .18);
+      background: linear-gradient(180deg, rgba(24, 43, 48, .92), rgba(12, 27, 33, .92));
+      color: rgba(237, 249, 251, .72);
+      box-shadow: none;
+    }
+    .market.active {
+      opacity: 1 !important;
+      border-color: rgba(83, 225, 157, .95);
+      background: linear-gradient(145deg, rgba(20, 105, 77, .98), rgba(7, 60, 49, .98));
+      box-shadow: inset 0 0 24px rgba(83, 225, 157, .2), 0 0 16px rgba(83, 225, 157, .15);
+    }
+    .market.active strong::before {
+      content: "ON ";
+      color: var(--green);
+    }
+    .market.active small {
+      color: rgba(237, 249, 251, .74);
+    }
+    .market:disabled:not(.active) {
+      opacity: .35;
     }
     .round-toast {
       min-width: min(280px, calc(100% - 44px));
@@ -2242,6 +2270,9 @@ function setPhase(next) {
   ui.status.textContent = next.toUpperCase();
   ui.status.style.color = next === "live" ? "var(--green)" : next === "resolution" ? "var(--red)" : "var(--cyan)";
   updateControlDeck();
+  if (window.matchMedia("(max-width: 900px)").matches && (next === "live" || next === "resolution")) {
+    setTimeout(() => document.querySelector(".stage-wrap")?.scrollIntoView({ behavior: "smooth", block: "start" }), 70);
+  }
 }
 
 function feedTime() {
@@ -3877,7 +3908,15 @@ updateUi = function() {
   // Mobile cash out button
   if (mobileMult) mobileMult.textContent = multiplier.toFixed(2) + 'x';
   if (mobileCashBtn) {
-    mobileCashBtn.disabled = !(state === 'live' && playerBet && !playerBet.done && playerBet.swimmer?.state === 'swimming');
+    const activeMobileCashout = state === 'live' && playerBet && !playerBet.done && playerBet.swimmer?.state === 'swimming';
+    mobileCashBtn.disabled = !activeMobileCashout;
+    if (state === 'live') {
+      mobileCashBtn.textContent = activeMobileCashout
+        ? 'Cash Out'
+        : playerBet?.done ? 'Cashed Out - Watching' : 'Watching Live';
+    } else {
+      mobileCashBtn.textContent = 'Cash Out';
+    }
   }
 };
 
