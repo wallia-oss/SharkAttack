@@ -1,0 +1,3757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Shore</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #081014;
+    --panel: rgba(9, 20, 25, .86);
+    --panel-2: rgba(13, 31, 37, .72);
+    --line: rgba(139, 205, 218, .22);
+    --text: #edf9fb;
+    --muted: #8eb0b8;
+    --gold: #f4c863;
+    --green: #53e19d;
+    --red: #ff5b66;
+    --cyan: #51d7ef;
+    --player: #4aa8ff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 22% 12%, rgba(53, 139, 145, .2), transparent 34%),
+      linear-gradient(145deg, #061014, #10252a 52%, #090f13);
+    color: var(--text);
+    font: 14px/1.4 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+
+  .game-shell {
+    width: min(1760px, calc(100vw - 28px));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 24vw, 390px);
+    align-items: start;
+    gap: 14px;
+  }
+
+  .stage-wrap {
+    position: relative;
+    height: calc(100vh - 28px);
+    min-height: 560px;
+    overflow: hidden;
+    border: 1px solid rgba(150, 220, 231, .2);
+    border-radius: 8px;
+    background: #061219;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .42);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .topbar,
+  .betbar,
+  .round-toast {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .topbar {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .brand {
+    min-width: 180px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: linear-gradient(145deg, rgba(10, 29, 35, .9), rgba(7, 14, 18, .72));
+    backdrop-filter: blur(10px);
+  }
+
+  .brand strong {
+    display: block;
+    font-size: 13px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .brand span {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .multiplier {
+    min-width: 180px;
+    padding: 10px 18px 11px;
+    border: 1px solid rgba(244, 200, 99, .32);
+    border-radius: 8px;
+    background: rgba(7, 12, 13, .74);
+    box-shadow: inset 0 0 24px rgba(244, 200, 99, .12), 0 14px 30px rgba(0, 0, 0, .24);
+    text-align: right;
+    backdrop-filter: blur(12px);
+  }
+
+  .multiplier .label {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .multiplier .value {
+    display: block;
+    margin-top: -2px;
+    color: var(--gold);
+    font: 700 46px/1 "Roboto Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    text-shadow: 0 0 20px rgba(244, 200, 99, .34);
+  }
+
+  .betbar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .metric {
+    min-height: 54px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(8, 18, 22, .64);
+    backdrop-filter: blur(10px);
+  }
+
+  .metric span {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .metric strong {
+    display: block;
+    margin-top: 3px;
+    font: 700 18px/1.2 "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .round-toast {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(.96);
+    min-width: 280px;
+    padding: 18px 24px;
+    border: 1px solid rgba(255, 91, 102, .42);
+    border-radius: 8px;
+    background: rgba(22, 8, 11, .84);
+    box-shadow: 0 20px 70px rgba(255, 24, 46, .22);
+    opacity: 0;
+    text-align: center;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+
+  .round-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .round-toast strong {
+    display: block;
+    color: var(--red);
+    font-size: 24px;
+    letter-spacing: .08em;
+  }
+
+  .round-toast span {
+    color: #ffc8cb;
+    font-family: "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .threat-banner {
+    position: absolute;
+    z-index: 3;
+    top: 84px;
+    right: 12px;
+    min-width: 180px;
+    padding: 9px 12px;
+    border: 1px solid rgba(74, 168, 255, .36);
+    border-radius: 8px;
+    background: rgba(7, 16, 22, .74);
+    box-shadow: inset 0 0 20px rgba(74, 168, 255, .12);
+    pointer-events: none;
+    backdrop-filter: blur(12px);
+  }
+
+  .threat-banner span {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .threat-banner strong {
+    display: block;
+    margin-top: 1px;
+    font: 800 18px/1.25 "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .threat-banner.threat-calm {
+    border-color: rgba(74, 168, 255, .38);
+    box-shadow: inset 0 0 22px rgba(74, 168, 255, .13);
+  }
+
+  .threat-banner.threat-calm strong { color: var(--player); }
+
+  .threat-banner.threat-near {
+    border-color: rgba(244, 200, 99, .62);
+    box-shadow: inset 0 0 26px rgba(244, 200, 99, .18), 0 0 24px rgba(244, 200, 99, .14);
+  }
+
+  .threat-banner.threat-near strong { color: var(--gold); }
+
+  .threat-banner.threat-danger {
+    border-color: rgba(255, 91, 102, .72);
+    box-shadow: inset 0 0 28px rgba(255, 91, 102, .2), 0 0 28px rgba(255, 91, 102, .18);
+  }
+
+  .threat-banner.threat-danger strong { color: var(--red); }
+
+  .side {
+    height: calc(100vh - 28px);
+    min-height: 560px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .side-lower {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+  }
+
+  .panel {
+    min-height: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 0 18px 52px rgba(0, 0, 0, .24);
+    overflow: hidden;
+  }
+
+  .side > .panel:first-child {
+    max-height: min(580px, calc(100vh - 200px));
+    overflow-y: auto;
+  }
+
+  .control-panel {
+    border-color: rgba(91, 192, 224, .3);
+    background: rgba(5, 38, 61, .95);
+    box-shadow:
+      inset 0 1px 0 rgba(126, 218, 239, .08),
+      0 18px 52px rgba(0, 0, 0, .28);
+  }
+
+  .control-panel .panel-head {
+    background: rgba(4, 29, 48, .97);
+    border-bottom-color: rgba(91, 192, 224, .22);
+  }
+
+  .control-panel .controls {
+    background: linear-gradient(180deg, rgba(10, 57, 86, .18), transparent 46%);
+  }
+
+  .control-panel .field input,
+  .control-panel .field select {
+    border-color: rgba(91, 192, 224, .3);
+    background: rgba(3, 22, 36, .92);
+  }
+
+  .control-panel .ticket div,
+  .control-panel .chip {
+    border-color: rgba(91, 192, 224, .23);
+    background: rgba(4, 28, 45, .72);
+  }
+
+  .control-panel .crowd-bets {
+    border-top-color: rgba(91, 192, 224, .2);
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(139, 205, 218, .16);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--panel);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .panel-head strong {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .status-pill {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(81, 215, 239, .12);
+    color: var(--cyan);
+    font: 700 10px/1.4 "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .controls {
+    padding: 6px 12px 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .deck-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sound-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  #soundToggle,
+  #soundSettings {
+    width: 30px;
+    min-height: 30px;
+    padding: 0;
+    border: 1px solid rgba(91, 192, 224, .28);
+    background: rgba(4, 28, 45, .76);
+    color: var(--cyan);
+    font-size: 15px;
+    letter-spacing: 0;
+  }
+
+  #soundToggle.muted { color: var(--muted); }
+  #soundSettings {
+    width: 26px;
+    min-height: 30px;
+    border-left: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .sound-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 210px;
+    display: none;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(91, 192, 224, .3);
+    border-radius: 7px;
+    background: rgba(3, 22, 36, .98);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .42);
+  }
+
+  .sound-menu.open { display: grid; }
+  .sound-menu label {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 5px 8px;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .sound-menu output { color: var(--text); font-family: "Roboto Mono", monospace; }
+  .sound-menu input { grid-column: 1 / -1; width: 100%; accent-color: var(--cyan); }
+
+  .deck-state > strong {
+    color: var(--text);
+    font: 800 13px "Roboto Mono", ui-monospace, monospace;
+    letter-spacing: 0;
+  }
+
+  .controls .field:has(.markets),
+  .controls .field:has(.market-help),
+  .controls .button-row,
+  .controls .ticket {
+    grid-column: 1 / -1;
+  }
+
+  .field {
+    display: grid;
+    gap: 4px;
+  }
+
+  .field label {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .field input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid rgba(139, 205, 218, .25);
+    border-radius: 6px;
+    background: rgba(4, 12, 15, .88);
+    color: var(--text);
+    font: 700 16px "Roboto Mono", ui-monospace, monospace;
+    outline: none;
+  }
+
+  .field select {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid rgba(139, 205, 218, .25);
+    border-radius: 6px;
+    background: rgba(4, 12, 15, .88);
+    color: var(--text);
+    font: 700 14px "Roboto Mono", ui-monospace, monospace;
+    outline: none;
+  }
+
+  .button-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .control-panel .main-actions {
+    margin: 4px 0 2px;
+  }
+
+  .control-panel .main-actions button {
+    min-height: 52px;
+    font-size: 14px;
+  }
+
+  .control-panel.deck-betting #cashOut,
+  .control-panel.deck-committed #cashOut,
+  .control-panel.deck-live #placeBet,
+  .control-panel.deck-resolution #placeBet {
+    display: none;
+  }
+
+  .control-panel.deck-betting .main-actions,
+  .control-panel.deck-committed .main-actions,
+  .control-panel.deck-live .main-actions,
+  .control-panel.deck-resolution .main-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .control-panel.deck-live #cashOut {
+    min-height: 62px;
+    font-size: 16px;
+    box-shadow: 0 0 28px rgba(244, 200, 99, .18);
+  }
+
+  .control-panel.deck-live.passive-watch #cashOut {
+    min-height: 38px;
+    font-size: 11px;
+    box-shadow: none;
+  }
+
+  .control-panel.deck-live .main-field,
+  .control-panel.deck-live .room-field,
+  .control-panel.deck-resolution .main-field,
+  .control-panel.deck-resolution .room-field {
+    display: none;
+  }
+
+  .control-panel.deck-live .crowd-body,
+  .control-panel.deck-resolution .crowd-body {
+    display: none;
+  }
+
+  .control-panel.deck-live .crowd-bets,
+  .control-panel.deck-resolution .crowd-bets {
+    padding: 7px 0;
+  }
+
+  .control-panel.deck-live .ticket > :not(.ticket-return):not(.ticket-threat),
+  .control-panel.deck-resolution .ticket > :not(.ticket-return):not(.ticket-threat) {
+    display: none;
+  }
+
+  .control-panel.deck-live .ticket,
+  .control-panel.deck-resolution .ticket {
+    padding-top: 0;
+  }
+
+  .crowd-bets {
+    border-top: 1px solid rgba(139, 205, 218, .14);
+    padding-top: 7px;
+  }
+
+  .crowd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .crowd-head > div {
+    min-width: 0;
+  }
+
+  .crowd-head label {
+    display: block;
+    color: var(--text);
+    font-weight: 800;
+  }
+
+  .crowd-head span {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  #crowdToggle {
+    width: auto;
+    min-height: 30px;
+    padding: 0 9px;
+    border: 1px solid rgba(139, 205, 218, .2);
+    background: rgba(20, 73, 86, .52);
+    color: var(--cyan);
+    font-size: 0;
+  }
+
+  #crowdToggle::before {
+    content: "4 markets";
+    font: 800 9px "Roboto Mono", ui-monospace, monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  #crowdToggle::after {
+    content: "+";
+    margin-left: 7px;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  #crowdToggle:hover {
+    border-color: rgba(81, 215, 239, .62);
+    background: rgba(24, 99, 116, .7);
+    box-shadow: 0 0 18px rgba(81, 215, 239, .12);
+  }
+
+  .crowd-body {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height .25s ease, opacity .18s ease, margin-top .25s ease;
+  }
+
+  .control-panel.crowd-open .crowd-body,
+  .control-panel.deck-live .crowd-body,
+  .control-panel.deck-resolution .crowd-body {
+    max-height: 420px;
+    margin-top: 7px;
+    opacity: 1;
+  }
+
+  .control-panel.crowd-open #crowdToggle,
+  .control-panel.deck-live #crowdToggle,
+  .control-panel.deck-resolution #crowdToggle {
+    color: var(--gold);
+  }
+
+  .control-panel.crowd-open #crowdToggle::after {
+    content: "−";
+  }
+
+  .control-panel.crowd-locked .crowd-bets {
+    opacity: .78;
+  }
+
+  .control-panel.crowd-locked #crowdToggle {
+    display: none;
+  }
+
+  .markets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .market {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 6px;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 7px 8px;
+    border: 1px solid rgba(81, 215, 239, .34);
+    border-radius: 6px;
+    background: linear-gradient(145deg, rgba(17, 55, 66, .9), rgba(7, 27, 37, .9));
+    color: var(--text);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+    transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease;
+  }
+
+  .market:not(:disabled):hover {
+    border-color: rgba(81, 215, 239, .82);
+    background: linear-gradient(145deg, rgba(24, 81, 94, .96), rgba(8, 39, 51, .96));
+    box-shadow: inset 0 0 18px rgba(81, 215, 239, .08), 0 5px 14px rgba(0, 0, 0, .2);
+    transform: translateY(-1px);
+  }
+
+  .market span {
+    color: var(--gold);
+    font: 800 11px "Roboto Mono", ui-monospace, monospace;
+    text-align: right;
+  }
+
+  .market strong {
+    color: #f2fbfc;
+    font-size: 11px;
+  }
+
+  .market small {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font: 9px/1.2 Inter, ui-sans-serif, system-ui;
+  }
+
+  .market-help {
+    margin: -1px 0 2px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .market.active {
+    border-color: rgba(83, 225, 157, .86);
+    background: linear-gradient(145deg, rgba(19, 88, 70, .96), rgba(7, 48, 43, .96));
+    box-shadow: inset 0 0 20px rgba(83, 225, 157, .14), 0 0 18px rgba(83, 225, 157, .12);
+  }
+
+  .market.active strong,
+  .market.active span {
+    color: var(--green);
+  }
+
+  .market:disabled:not(.active) {
+    opacity: .48;
+  }
+
+  .fair-row {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(139, 205, 218, .08);
+    font: 11px "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .fair-row span {
+    color: var(--muted);
+  }
+
+  .fair-row strong {
+    overflow: hidden;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fair-body {
+    max-height: 120px;
+    overflow: hidden;
+    transition: max-height .22s ease;
+  }
+
+  .fair.collapsed .fair-body {
+    max-height: 34px;
+  }
+
+  .fair.collapsed .fair-row:not(:first-child) {
+    display: none;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 11px 12px;
+  }
+
+  .donut {
+    width: 76px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(var(--cyan) 0deg, var(--green) 0deg, var(--red) 0deg, rgba(139,205,218,.18) 0deg);
+    box-shadow: inset 0 0 20px rgba(0,0,0,.34);
+  }
+
+  .donut::after {
+    content: attr(data-total);
+    width: 48px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #081014;
+    color: var(--text);
+    font: 800 13px "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .legend {
+    display: grid;
+    gap: 5px;
+    font: 11px "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .legend div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--muted);
+  }
+
+  .legend b {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .legend .water span,
+  .legend .water b { color: var(--cyan); }
+
+  .legend .safe span,
+  .legend .safe b { color: var(--green); }
+
+  .legend .taken span,
+  .legend .taken b { color: var(--red); }
+
+  .legend .spectators span,
+  .legend .spectators b { color: var(--muted); }
+
+  button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 6px;
+    color: #061014;
+    cursor: pointer;
+    font: 800 12px/1 Inter, ui-sans-serif, system-ui;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  #placeBet { background: linear-gradient(180deg, #75f3b8, #31ba7c); }
+  #cashOut { background: linear-gradient(180deg, #ffd979, #e9a92c); }
+  button:disabled { cursor: default; filter: grayscale(.75) brightness(.7); opacity: .62; }
+
+  .ticket {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding-top: 2px;
+  }
+
+  .chips {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .chip {
+    min-height: 28px;
+    border: 1px solid rgba(139, 205, 218, .2);
+    background: rgba(10, 25, 30, .74);
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  .chip.active {
+    border-color: rgba(244, 200, 99, .75);
+    color: var(--gold);
+    box-shadow: inset 0 0 16px rgba(244, 200, 99, .14);
+  }
+
+  .ticket div {
+    padding: 7px 8px;
+    border: 1px solid rgba(139, 205, 218, .16);
+    border-radius: 6px;
+    background: var(--panel-2);
+  }
+
+  .ticket .wide {
+    grid-column: 1 / -1;
+  }
+
+  .ticket span {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .ticket strong {
+    display: block;
+    margin-top: 2px;
+    font-family: "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .ticket strong.threat-calm { color: var(--cyan); }
+  .ticket strong.threat-near { color: var(--gold); }
+  .ticket strong.threat-danger { color: var(--red); }
+
+  .feed {
+    padding: 5px 0;
+    height: 62px;
+    overflow: hidden;
+  }
+
+  .feed-panel {
+    flex: 0 1 108px;
+    min-height: 72px;
+  }
+
+  .players {
+    height: 100%;
+    padding: 5px 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .swimmers-panel {
+    flex: 0 1 124px;
+    min-height: 80px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .status-panel {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .side-lower > .status-panel .panel-head {
+    position: static;
+    padding: 7px 12px;
+  }
+
+  .side-lower > .status-panel .status-grid {
+    grid-template-columns: 58px 1fr;
+    gap: 10px;
+    padding: 7px 12px 9px;
+  }
+
+  .side-lower > .status-panel .donut { width: 54px; }
+  .side-lower > .status-panel .donut::after {
+    width: 34px;
+    font-size: 10px;
+  }
+
+  .side-lower > .status-panel .legend {
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 12px;
+    font-size: 10px;
+  }
+
+  .side-lower > .status-panel .legend .water {
+    grid-row: 1 / span 2;
+    display: grid;
+    align-content: center;
+    justify-content: stretch;
+    padding-right: 10px;
+    border-right: 1px solid rgba(139, 205, 218, .14);
+  }
+
+  .side-lower > .status-panel .legend .water b {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .round-status-bar {
+    display: flex;
+    height: 5px;
+    margin: 0 12px 9px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(139, 205, 218, .12);
+  }
+
+  .round-status-bar span {
+    min-width: 0;
+    transition: width .2s ease;
+  }
+
+  .round-status-bar .water { background: var(--cyan); }
+  .round-status-bar .safe { background: var(--green); }
+  .round-status-bar .taken { background: var(--red); }
+  .round-status-bar .spectators { background: rgba(142, 176, 184, .48); }
+
+  .fair {
+    flex: 0 0 auto;
+    min-height: 72px;
+  }
+
+  .feed-row,
+  .player-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(139, 205, 218, .08);
+    font: 12px "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .feed-row:last-child,
+  .player-row:last-child { border-bottom: 0; }
+
+  .feed-row small,
+  .player-row small { color: var(--muted); }
+
+  .player-row {
+    grid-template-columns: minmax(74px, 1fr) 42px 48px 52px;
+    gap: 5px;
+  }
+
+  .player-row .player-stake,
+  .player-row .player-return {
+    color: var(--text);
+    font-size: 10px;
+    text-align: right;
+  }
+
+  .player-row > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .player-threat {
+    min-width: 48px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-align: center;
+    font: 800 8px "Roboto Mono", ui-monospace, monospace;
+  }
+
+  .player-threat.calm { color: var(--cyan); background: rgba(81, 215, 239, .1); }
+  .player-threat.near { color: var(--gold); background: rgba(244, 200, 99, .12); }
+  .player-threat.danger { color: var(--red); background: rgba(255, 91, 102, .14); }
+
+  .player-columns {
+    padding-block: 4px;
+    padding-right: 24px;
+    color: var(--muted);
+    background: rgba(8, 18, 22, .48);
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+
+  .player-columns small {
+    font-size: 8px;
+    text-align: right;
+  }
+
+  .player-columns small:last-child { text-align: center; }
+
+  .players-empty {
+    padding: 14px 12px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .gold { color: var(--gold); }
+
+  
+  /* Round history strip */
+  .round-history {
+    position: absolute;
+    z-index: 3;
+    top: 12px;
+    left: 220px;
+    right: 204px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 5px 6px;
+    pointer-events: none;
+    max-height: 56px;
+    overflow: hidden;
+  }
+  .rh-pill {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font: 800 11px "Roboto Mono", ui-monospace, monospace;
+    opacity: 1;
+    white-space: nowrap;
+    background: rgba(5, 17, 22, .88);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .24);
+    backdrop-filter: blur(8px);
+  }
+  .rh-low  { background: rgba(53,18,23,.9); color: #ff9ba2; border: 1px solid rgba(255,91,102,.62); }
+  .rh-mid  { background: rgba(52,42,17,.9); color: #ffd875; border: 1px solid rgba(244,200,99,.58); }
+  .rh-high { background: rgba(13,48,36,.9); color: #72f2b3; border: 1px solid rgba(83,225,157,.58); }
+  .rh-moon { background: rgba(38,27,61,.92); color: #d1b7ff; border: 1px solid rgba(160,120,255,.62); }
+
+  /* Mobile cash out bar */
+  .mobile-cashout {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 12px;
+    background: rgba(6,16,20,.92);
+    border-top: 1px solid rgba(139,205,218,.2);
+    backdrop-filter: blur(14px);
+    align-items: center;
+    gap: 10px;
+  }
+  .mobile-cashout .mobile-mult {
+    font: 700 28px "Roboto Mono", ui-monospace, monospace;
+    color: var(--gold);
+    min-width: 90px;
+  }
+  .mobile-cashout button {
+    flex: 1;
+    min-height: 52px;
+    font-size: 16px;
+    background: linear-gradient(180deg, #ffd979, #e9a92c);
+    border-radius: 8px;
+  }
+  @media (max-width: 900px) {
+    .mobile-cashout { display: flex; }
+    .betbar { bottom: 76px; }
+  }
+
+  /* Result card */
+  .result-card {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4,10,14,.82);
+    backdrop-filter: blur(8px);
+  }
+  .result-card.show { display: flex; }
+  .result-inner {
+    width: min(340px, calc(100vw - 32px));
+    padding: 28px 24px 22px;
+    border: 1px solid rgba(139,205,218,.28);
+    border-radius: 12px;
+    background: rgba(9,22,28,.96);
+    box-shadow: 0 32px 80px rgba(0,0,0,.6);
+    text-align: center;
+  }
+  .result-title {
+    font: 800 13px Inter, ui-sans-serif;
+    letter-spacing: .14em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .result-mult {
+    font: 700 52px "Roboto Mono", ui-monospace, monospace;
+    color: var(--gold);
+    text-shadow: 0 0 28px rgba(244,200,99,.35);
+    line-height: 1;
+    margin-bottom: 18px;
+  }
+  .result-mult.red-mult { color: var(--red); text-shadow: 0 0 28px rgba(255,91,102,.35); }
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(139,205,218,.1);
+    font: 13px "Roboto Mono", ui-monospace, monospace;
+    color: var(--muted);
+  }
+  .result-row strong { color: var(--text); }
+  .result-history {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin: 14px 0 18px;
+  }
+  .result-close {
+    width: 100%;
+    min-height: 44px;
+    background: linear-gradient(180deg, #75f3b8, #31ba7c);
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  /* Tutorial overlay */
+  #tutOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4,10,14,.88);
+    backdrop-filter: blur(10px);
+  }
+  .tut-card {
+    width: min(380px, calc(100vw - 32px));
+    padding: 32px 28px 24px;
+    border: 1px solid rgba(139,205,218,.28);
+    border-radius: 12px;
+    background: rgba(9,22,28,.98);
+    box-shadow: 0 32px 80px rgba(0,0,0,.7);
+    text-align: center;
+  }
+  .tut-shark {
+    display: block;
+    width: 118px;
+    height: 86px;
+    margin: 0 auto 6px;
+  }
+  .tut-card h2 { font-size: 18px; margin: 0 0 12px; color: var(--text); }
+  .tut-card p  { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0 0 22px; }
+  .tut-step { font: 11px "Roboto Mono", ui-monospace, monospace; color: var(--muted); margin-bottom: 16px; }
+  #tutNext {
+    width: 100%;
+    min-height: 44px;
+    background: linear-gradient(180deg, #75f3b8, #31ba7c);
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 900px) {
+    html {
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      touch-action: pan-y;
+    }
+    body {
+      display: block;
+      min-height: 100%;
+      padding: 8px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
+    .game-shell {
+      width: 100%;
+      grid-template-columns: 1fr;
+      overflow: visible;
+    }
+    .stage-wrap {
+      height: 52svh;
+      min-height: 400px;
+      touch-action: pan-y;
+      transition: height .28s ease;
+    }
+    .stage-wrap canvas { touch-action: pan-y; }
+    body.phase-locked .stage-wrap,
+    body.phase-live .stage-wrap,
+    body.phase-resolution .stage-wrap {
+      height: 72svh;
+      min-height: 520px;
+    }
+    .side-lower > .status-panel { display: none; }
+    #crowdToggle { display: block; }
+    #crowdToggle {
+      width: 30px;
+      padding: 0;
+    }
+    #crowdToggle::before { display: none; }
+    #crowdToggle::after {
+      margin-left: 0;
+      content: "+";
+    }
+    .control-panel.crowd-open #crowdToggle::after { content: "−"; }
+    .side {
+      height: auto;
+      min-height: auto;
+      display: block;
+      overflow: visible;
+      touch-action: pan-y;
+    }
+    .side-lower {
+      margin-top: 10px;
+      overflow: visible;
+      touch-action: pan-y;
+    }
+    .players {
+      height: auto;
+      max-height: none;
+      overflow: visible;
+      scrollbar-gutter: auto;
+    }
+    .swimmers-panel {
+      display: block;
+      min-height: 0;
+    }
+    .side > .panel:first-child {
+      position: relative;
+      top: auto;
+      z-index: 12;
+      max-height: none;
+      overflow: visible;
+      touch-action: pan-y;
+    }
+    body.phase-locked .control-panel .main-field,
+    body.phase-locked .control-panel .room-field,
+    body.phase-locked .control-panel .main-actions,
+    body.phase-locked .control-panel .crowd-bets,
+    body.phase-locked .control-panel .ticket,
+    body.phase-live .control-panel .crowd-bets,
+    body.phase-resolution .control-panel .crowd-bets {
+      display: none;
+    }
+    body.phase-betting .control-panel.deck-committed .main-field,
+    body.phase-betting .control-panel.deck-committed .room-field,
+    body.phase-betting .control-panel.deck-committed .main-actions,
+    body.phase-betting .control-panel.deck-committed .ticket {
+      display: none;
+    }
+    body.phase-betting .control-panel.deck-committed .crowd-bets {
+      order: -1;
+      border-top: 0;
+      padding-top: 2px;
+    }
+    body.phase-betting .control-panel.deck-committed .crowd-body {
+      display: grid;
+      max-height: 460px;
+      margin-top: 7px;
+      opacity: 1;
+      overflow: visible;
+    }
+    body.phase-betting .control-panel.deck-committed .crowd-body .markets { order: 1; }
+    body.phase-betting .control-panel.deck-committed .crowd-body .chips { order: 2; }
+    body.phase-betting .control-panel.deck-committed .crowd-body #marketStakeInput { order: 3; }
+    body.phase-betting .control-panel.deck-committed .crowd-body .market-help {
+      order: 4;
+      margin-top: 2px;
+    }
+    body.phase-betting .control-panel.deck-committed #crowdToggle {
+      display: none;
+    }
+    body.phase-live .control-panel .main-actions,
+    body.phase-resolution .control-panel .main-actions {
+      display: none;
+    }
+    body.phase-locked .control-panel .controls {
+      display: none;
+    }
+    body.phase-live .control-panel .controls,
+    body.phase-resolution .control-panel .controls {
+      padding: 7px 10px 9px;
+    }
+    body.phase-live .control-panel.passive-watch .controls {
+      display: none;
+    }
+    .controls .field:has(.markets),
+    .controls .field:has(.market-help),
+    .button-row,
+    .ticket {
+      grid-column: 1 / -1;
+    }
+    .round-history {
+      display: none;
+    }
+    .topbar {
+      top: 8px;
+      left: 8px;
+      right: auto;
+      width: 132px;
+      justify-content: flex-start;
+    }
+    .brand { display: none; }
+    .multiplier {
+      width: 132px;
+      min-width: 0;
+      box-sizing: border-box;
+      padding: 5px 14px 7px;
+      text-align: center;
+    }
+    .multiplier .label { font-size: 8px; }
+    .multiplier .value { font-size: 34px; }
+    .threat-banner {
+      top: 8px;
+      left: 148px;
+      right: 8px;
+      min-width: 0;
+      min-height: 57px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 5px 10px 7px;
+    }
+    .threat-banner span {
+      display: block;
+      text-align: center;
+      font-size: 8px;
+    }
+    .threat-banner strong {
+      text-align: center;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .betbar {
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 5px;
+    }
+    .betbar .metric {
+      min-height: 42px;
+      padding: 5px 7px;
+    }
+    .betbar .metric:nth-child(3) { display: none; }
+    .metric span { font-size: 8px; }
+    .metric strong { margin-top: 1px; font-size: 14px; }
+    body.phase-live.player-active .betbar { bottom: 72px; }
+    .mobile-cashout { display: none; }
+    body.phase-live.player-active .mobile-cashout { display: flex; }
+    .mobile-cashout {
+      padding: 8px;
+      background: rgba(3, 20, 31, .94);
+    }
+    .mobile-cashout .mobile-mult {
+      min-width: 82px;
+      font-size: 24px;
+    }
+    .mobile-cashout button {
+      min-height: 48px;
+      font-size: 13px;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .control-panel:not(.crowd-open) .crowd-bets:not(.crowd-locked) {
+      margin: 2px -4px 0;
+      padding: 8px 6px 6px;
+      border: 1px solid rgba(81, 215, 239, .22);
+      border-radius: 6px;
+      background: rgba(12, 48, 59, .38);
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .game-shell {
+      grid-template-columns: minmax(0, 1fr) clamp(370px, 22vw, 420px);
+      gap: 16px;
+    }
+    .multiplier .value { font-size: 52px; }
+  }
+
+  @media (max-width: 560px) {
+    .multiplier { width: auto; }
+    .controls { grid-template-columns: 1fr; }
+    .stage-wrap { min-height: 400px; }
+    body.phase-locked .stage-wrap,
+    body.phase-live .stage-wrap,
+    body.phase-resolution .stage-wrap { min-height: 520px; }
+  }
+</style>
+</head>
+<body>
+<main class="game-shell">
+  <section class="stage-wrap" aria-label="Shark betting game">
+    <canvas id="game"></canvas>
+    <div class="topbar">
+      <div class="brand">
+        <strong>The Shore</strong>
+        <span>MK19 Labs · Survive &amp; Cash Out</span>
+      </div>
+      <div class="multiplier">
+        <span class="label">Current Multiplier</span>
+        <span class="value" id="multiplier">1.00x</span>
+      </div>
+    </div>
+    <div class="round-history" id="roundHistory"></div>
+    <div class="round-toast" id="toast">
+      <strong id="toastTitle">FINAL SWEEP</strong>
+      <span id="toastValue">1.00x</span>
+    </div>
+    <div class="threat-banner threat-calm" id="stageThreat">
+      <span>Shark Threat</span>
+      <strong id="stageThreatValue">No swimmer</strong>
+    </div>
+    <div class="betbar">
+      <div class="metric"><span>Phase</span><strong id="phase">BETTING</strong></div>
+      <div class="metric"><span>Players In</span><strong id="alive">0</strong></div>
+      <div class="metric"><span>Session Net</span><strong id="pool">$0</strong></div>
+      <div class="metric"><span id="timerLabel">Timer</span><strong id="timer">9.0s</strong></div>
+    </div>
+    <div class="mobile-cashout" id="mobileCashout">
+      <div class="mobile-mult" id="mobileMult">1.00x</div>
+      <button id="mobileCashBtn" type="button" disabled>Cash Out</button>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="panel control-panel deck-betting" id="controlPanel">
+      <div class="panel-head">
+        <strong>Betting Deck</strong>
+        <div class="deck-state">
+          <div class="sound-control">
+            <button id="soundToggle" class="muted" type="button" aria-label="Enable sound" title="Sound settings">&#128263;</button>
+            <button id="soundSettings" type="button" aria-label="Sound volume settings" title="Sound volume settings">&#9881;</button>
+            <div class="sound-menu" id="soundMenu">
+              <label>Music <output id="musicVolumeOut">35%</output><input id="musicVolume" type="range" min="0" max="100" value="35"></label>
+              <label>Effects <output id="effectsVolumeOut">55%</output><input id="effectsVolume" type="range" min="0" max="100" value="55"></label>
+            </div>
+          </div>
+          <span class="status-pill" id="status">OPEN</span>
+          <strong id="deckTimer">9.0s</strong>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="field main-field">
+          <label for="stake">Stake</label>
+          <input id="stake" type="number" min="1" value="25">
+        </div>
+        <div class="field main-field">
+          <label for="autoCash" style="display:flex;justify-content:space-between;align-items:center;">
+            Auto Cashout
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;letter-spacing:.08em;">
+              <input type="checkbox" id="autoCashEnabled" style="width:auto;accent-color:var(--gold);">
+              ON
+            </label>
+          </label>
+          <input id="autoCash" type="number" min="1.1" step="0.1" value="2.40" disabled style="opacity:.4;">
+        </div>
+        <div class="field room-field" style="grid-column:1/-1">
+          <label for="playerCount">Room Size</label>
+          <select id="playerCount">
+            <option value="100" selected>Room · 100 players</option>
+            <option value="150">Room · 150 players</option>
+            <option value="200">Room · 200 players</option>
+          </select>
+        </div>
+        <div class="button-row main-actions">
+          <button id="placeBet" type="button">Join The Water</button>
+          <button id="cashOut" type="button" disabled>Cash Out</button>
+        </div>
+        <div class="field crowd-bets" id="crowdBets">
+          <div class="crowd-head">
+            <div>
+              <label>Crowd Bets</label>
+              <span id="crowdState">Optional side markets</span>
+            </div>
+            <button id="crowdToggle" type="button" aria-label="Toggle crowd bets" title="Toggle crowd bets">+</button>
+          </div>
+          <div class="crowd-body">
+          <div class="market-help">Bet on crowd behaviour — settles at round end regardless of whether you swim.</div>
+          <div class="chips" id="marketChips">
+            <button class="chip" type="button" data-stake="5">$5</button>
+            <button class="chip active" type="button" data-stake="25">$25</button>
+            <button class="chip" type="button" data-stake="100">$100</button>
+            <button class="chip" type="button" data-stake="500">$500</button>
+          </div>
+          <input id="marketStakeInput" type="number" min="1" max="5000" value="25">
+          <div class="markets">
+            <button class="market" type="button" data-market="panic"><strong>Panic Cashout</strong><span>2.35x</span><small>30%+ cash out in any 0.7s window</small></button>
+            <button class="market" type="button" data-market="last"><strong>Hero Exit</strong><span>3.43x</span><small>Someone cashes at 3x or above</small></button>
+            <button class="market" type="button" data-market="quick"><strong>Shark Frenzy</strong><span>3.20x</span><small>45%+ taken by the strike</small></button>
+            <button class="market" type="button" data-market="clean"><strong>Clean Escape</strong><span>3.24x</span><small>Strike 3x+ and 45% cash out</small></button>
+          </div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div class="ticket-balance"><span>Balance</span><strong id="balance">$1,000</strong></div>
+          <div class="ticket-return"><span>Return</span><strong id="return">$0</strong></div>
+          <div class="ticket-depth"><span>Depth</span><strong id="swimmerDepth">Not placed</strong></div>
+          <div class="ticket-threat"><span>Threat</span><strong id="threatLevel" class="threat-calm">No swimmer</strong></div>
+          <div class="wide ticket-result"><span>Ticket Result</span><strong id="ticketResult">No open ticket</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="side-lower">
+    <section class="panel status-panel">
+      <div class="panel-head">
+        <strong>Round Status</strong>
+        <span class="status-pill" id="cashed">0 CASHED</span>
+      </div>
+      <div class="status-grid">
+        <div class="donut" id="statusDonut" data-total="0"></div>
+        <div class="legend">
+          <div class="water"><span>At risk</span><b id="waterCount">0</b></div>
+          <div class="safe"><span>Cashed out</span><b id="safeCount">0</b></div>
+          <div class="taken"><span>Taken</span><b id="takenCount">0</b></div>
+          <div class="spectators"><span>Spectators</span><b id="spectatorCount">0</b></div>
+        </div>
+      </div>
+      <div class="round-status-bar" id="roundStatusBar" aria-hidden="true">
+        <span class="water"></span><span class="safe"></span><span class="taken"></span><span class="spectators"></span>
+      </div>
+    </section>
+
+    <section class="panel feed-panel">
+      <div class="panel-head">
+        <strong>Live Feed</strong>
+        <span class="status-pill">TAPE</span>
+      </div>
+      <div class="feed" id="feed"></div>
+    </section>
+
+    <section class="panel swimmers-panel">
+      <div class="panel-head">
+        <strong>Biggest Swimmers</strong>
+        <span class="status-pill" id="round">$0 IN WATER</span>
+      </div>
+      <div class="player-row player-columns"><span>Name</span><small>Stake</small><small>Return</small><small>Threat</small></div>
+      <div class="players" id="players"></div>
+    </section>
+
+    <section class="panel fair collapsed" id="fairPanel">
+      <div class="panel-head">
+        <strong>Provably Fair</strong>
+        <span class="status-pill" id="fairStatus">HASH</span>
+      </div>
+      <div class="fair-body">
+        <div class="fair-row"><span>Hash</span><strong id="hash">pending</strong></div>
+        <div class="fair-row"><span>Seed</span><strong id="seed">hidden</strong></div>
+        <div class="fair-row"><span>Strike Point</span><strong id="ceiling">0.00x</strong></div>
+        <div class="fair-row"><span>RTP</span><strong id="rtp">96.00%</strong></div>
+      </div>
+    </section>
+    </div>
+  </aside>
+  <div id="tutOverlay">
+    <div class="tut-card">
+      <canvas class="tut-shark" id="tutShark" width="184" height="148" aria-hidden="true"></canvas>
+      <div class="tut-step" id="tutStep">1 / 5</div>
+      <h2 id="tutTitle">Welcome to The Shore</h2>
+      <p id="tutBody">100+ players dive into the ocean each round. The multiplier climbs while swimmers stay at risk.</p>
+      <button id="tutNext" type="button">Next →</button>
+    </div>
+  </div>
+  <div class="result-card" id="resultCard">
+    <div class="result-inner">
+      <div class="result-title" id="resultTitle">CASHED OUT</div>
+      <div class="result-mult" id="resultMult">2.40x</div>
+      <div class="result-row"><span>Stake</span><strong id="resultStake">$25</strong></div>
+      <div class="result-row"><span>Return</span><strong id="resultReturn" class="green">$60</strong></div>
+      <div class="result-row"><span>Profit</span><strong id="resultProfit" class="green">+$35</strong></div>
+      <div class="result-history" id="resultHistory"></div>
+      <button class="result-close" id="resultClose" type="button">Continue</button>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── Tutorial ──────────────────────────────────────────────────────────────────
+const TUTORIAL_STEPS = [
+  { title: "Welcome to The Shore", body: "100+ players dive into the ocean each round. The multiplier climbs while swimmers stay at risk." },
+  { title: "Cash Out Before the Shark", body: "Tap Cash Out any time to return to shore safely and lock in your multiplier. Wait too long and the shark finds you." },
+  { title: "The Shark's Path", body: "The shark follows a provably fair path set before each round. Its coordinates are committed by hash — you can verify after." },
+  { title: "Spectator Markets", body: "Even if you don't swim, bet on crowd behaviour — Panic Cashout, Hero Exit, Early Bloodbath, Clean Escape — all resolve independently." },
+  { title: "You're Ready", body: "Watch the threat banner top-right — it tells you personally how close the shark is to your swimmer. Good luck." }
+];
+let tutStep = 0;
+let tutSeen = false;
+let tutSharkFrame = null;
+
+function showTutorial() {
+  if (tutSeen) return;
+  const overlay = document.getElementById('tutOverlay');
+  overlay.style.display = 'flex';
+  renderTutStep();
+  startTutorialShark();
+}
+
+function renderTutStep() {
+  const s = TUTORIAL_STEPS[tutStep];
+  document.getElementById('tutTitle').textContent = s.title;
+  document.getElementById('tutBody').textContent = s.body;
+  document.getElementById('tutStep').textContent = (tutStep + 1) + ' / ' + TUTORIAL_STEPS.length;
+  document.getElementById('tutNext').textContent = tutStep < TUTORIAL_STEPS.length - 1 ? 'Next →' : 'Play Now';
+}
+
+function startTutorialShark() {
+  if (tutSharkFrame) return;
+  const canvas = document.getElementById('tutShark');
+  const sharkCtx = canvas?.getContext('2d');
+  if (!canvas || !sharkCtx) return;
+
+  const draw = (now) => {
+    const t = now * .001;
+    sharkCtx.clearRect(0, 0, canvas.width, canvas.height);
+    sharkCtx.save();
+    sharkCtx.translate(92 + Math.sin(t * 1.15) * 9, 74 + Math.cos(t * 1.35) * 4);
+    sharkCtx.rotate(Math.sin(t * 1.25) * .12);
+    sharkCtx.scale(1 + Math.sin(t * 2.2) * .025, 1 + Math.cos(t * 1.8) * .018);
+
+    const aura = sharkCtx.createRadialGradient(0, 4, 4, 0, 4, 74);
+    aura.addColorStop(0, "rgba(255, 91, 102, .24)");
+    aura.addColorStop(1, "rgba(255, 91, 102, 0)");
+    sharkCtx.fillStyle = aura;
+    sharkCtx.beginPath();
+    sharkCtx.arc(0, 4, 74, 0, Math.PI * 2);
+    sharkCtx.fill();
+
+    sharkCtx.fillStyle = "rgba(0,0,0,.24)";
+    sharkCtx.beginPath();
+    sharkCtx.ellipse(4, 30, 48, 12, 0, 0, Math.PI * 2);
+    sharkCtx.fill();
+
+    const tailKick = Math.sin(t * 4) * 7;
+    const body = sharkCtx.createLinearGradient(-48, -22, 56, 18);
+    body.addColorStop(0, "#142d38");
+    body.addColorStop(.46, "#3c7181");
+    body.addColorStop(1, "#0d2029");
+    sharkCtx.fillStyle = body;
+    sharkCtx.beginPath();
+    sharkCtx.moveTo(-52, 1);
+    sharkCtx.bezierCurveTo(-34, -27, 34, -29, 61, -3);
+    sharkCtx.bezierCurveTo(40, 22, -25, 28, -52, 1);
+    sharkCtx.fill();
+
+    sharkCtx.fillStyle = "#0d2029";
+    sharkCtx.beginPath();
+    sharkCtx.moveTo(-49, 0);
+    sharkCtx.lineTo(-82, -20 + tailKick);
+    sharkCtx.lineTo(-73, 0);
+    sharkCtx.lineTo(-84, 22 + tailKick * .55);
+    sharkCtx.closePath();
+    sharkCtx.fill();
+
+    sharkCtx.fillStyle = "#244858";
+    sharkCtx.beginPath();
+    sharkCtx.moveTo(-6, -20);
+    sharkCtx.quadraticCurveTo(5, -51, 15, -20);
+    sharkCtx.fill();
+
+    sharkCtx.fillStyle = "#eaf7f8";
+    sharkCtx.beginPath();
+    sharkCtx.arc(39, -8, 5, 0, Math.PI * 2);
+    sharkCtx.fill();
+    sharkCtx.fillStyle = "#05090b";
+    sharkCtx.beginPath();
+    sharkCtx.arc(41, -8, 2.4, 0, Math.PI * 2);
+    sharkCtx.fill();
+
+    sharkCtx.strokeStyle = "rgba(255,255,255,.78)";
+    sharkCtx.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) {
+      sharkCtx.beginPath();
+      sharkCtx.moveTo(42 + i * 4, 10);
+      sharkCtx.lineTo(44 + i * 3, 17);
+      sharkCtx.stroke();
+    }
+    sharkCtx.restore();
+
+    if (document.getElementById('tutOverlay')?.style.display === 'flex') {
+      tutSharkFrame = requestAnimationFrame(draw);
+    } else {
+      tutSharkFrame = null;
+    }
+  };
+  tutSharkFrame = requestAnimationFrame(draw);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('tutNext');
+  if (btn) btn.addEventListener('click', () => {
+    tutStep++;
+    if (tutStep >= TUTORIAL_STEPS.length) {
+      document.getElementById('tutOverlay').style.display = 'none';
+      tutSeen = true;
+      if (tutSharkFrame) cancelAnimationFrame(tutSharkFrame);
+      tutSharkFrame = null;
+      // Fresh round with full betting window the moment tutorial closes
+      resetRound();
+    } else {
+      renderTutStep();
+    }
+  });
+  showTutorial();
+});
+// ── End Tutorial ──────────────────────────────────────────────────────────────
+
+const NAMES = [
+  "james_k92","sarah_m","tomwilson","lucy_b","danno88","kev_plays",
+  "priya_r","mattUK","georgia_j","sam_t99","ollie_w","chloe_x",
+  "ryanbet","emma_lou","jackH","niamh_o","ben_c","steph_v",
+  "alexis_j","will_b88","harriet_r","callum_t","izzy_m","dylan_k",
+  "freya_s","noah_p","amber_h","liam_w","sophie_c","finn_o",
+  "ellie_r","max_j","grace_t","harry_b","ruby_m","oscar_w",
+  "poppy_h","archie_k","daisy_p","charlie_s","mia_l","theo_r",
+  "evie_j","joshua_c","isla_t","george_m","ava_b","ethan_w",
+  "jessica_h","oliver_p","ella_k","william_j","sienna_r","james_t",
+  "millie_c","henry_w","phoebe_s","sebastian_m","imogen_b","edward_r",
+  "zoe_k","reuben_t","florence_j","felix_c","harriet_w","jasper_m",
+  "scarlett_p","barnaby_r","alice_h","hugo_t","matilda_k","rupert_j",
+  "jessica_w","toby_s","eleanor_m","louis_b","arabella_r","freddie_t",
+  "clementine_j","ted_w","rosie_k","rex_m","violet_p","monty_h",
+  "celeste_r","kit_t","aurora_j","jago_w","penelope_s","cas_m",
+  "xanthe_b","idris_r","lyra_t","caspian_j","juno_w","lexi_k",
+  "nate_m","tara_p","dan_h","becky_r","mike_t","kate_j",
+  "paul_w","anna_s","chris_m","lisa_b","mark_r","helen_t"
+];
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const desktopStageImage = new Image();
+desktopStageImage.src = "assets/shore-desktop-stage-v2.png";
+const ui = {
+  multiplier: document.getElementById("multiplier"),
+  round: document.getElementById("round"),
+  phase: document.getElementById("phase"),
+  alive: document.getElementById("alive"),
+  pool: document.getElementById("pool"),
+  timer: document.getElementById("timer"),
+  timerLabel: document.getElementById("timerLabel"),
+  deckTimer: document.getElementById("deckTimer"),
+  soundToggle: document.getElementById("soundToggle"),
+  soundSettings: document.getElementById("soundSettings"),
+  soundMenu: document.getElementById("soundMenu"),
+  musicVolume: document.getElementById("musicVolume"),
+  musicVolumeOut: document.getElementById("musicVolumeOut"),
+  effectsVolume: document.getElementById("effectsVolume"),
+  effectsVolumeOut: document.getElementById("effectsVolumeOut"),
+  status: document.getElementById("status"),
+  controlPanel: document.getElementById("controlPanel"),
+  crowdBets: document.getElementById("crowdBets"),
+  crowdState: document.getElementById("crowdState"),
+  crowdToggle: document.getElementById("crowdToggle"),
+  feed: document.getElementById("feed"),
+  players: document.getElementById("players"),
+  cashed: document.getElementById("cashed"),
+  stake: document.getElementById("stake"),
+  autoCash: document.getElementById("autoCash"),
+  playerCount: document.getElementById("playerCount"),
+  swimmerDepth: document.getElementById("swimmerDepth"),
+  threatLevel: document.getElementById("threatLevel"),
+  stageThreat: document.getElementById("stageThreat"),
+  stageThreatValue: document.getElementById("stageThreatValue"),
+  marketStake: document.getElementById("marketStake"),
+  marketStakeInput: document.getElementById("marketStakeInput"),
+  ticketResult: document.getElementById("ticketResult"),
+  marketChips: Array.from(document.querySelectorAll(".chip")),
+  placeBet: document.getElementById("placeBet"),
+  cashOut: document.getElementById("cashOut"),
+  balance: document.getElementById("balance"),
+  returnValue: document.getElementById("return"),
+  hash: document.getElementById("hash"),
+  seed: document.getElementById("seed"),
+  ceiling: document.getElementById("ceiling"),
+  rtp: document.getElementById("rtp"),
+  fairPanel: document.getElementById("fairPanel"),
+  fairStatus: document.getElementById("fairStatus"),
+  statusDonut: document.getElementById("statusDonut"),
+  roundStatusSegments: Array.from(document.querySelectorAll("#roundStatusBar span")),
+  waterCount: document.getElementById("waterCount"),
+  safeCount: document.getElementById("safeCount"),
+  takenCount: document.getElementById("takenCount"),
+  spectatorCount: document.getElementById("spectatorCount"),
+  toast: document.getElementById("toast"),
+  toastTitle: document.getElementById("toastTitle"),
+  toastValue: document.getElementById("toastValue"),
+  markets: Array.from(document.querySelectorAll(".market"))
+};
+
+let W = 900;
+let H = 560;
+let DPR = 1;
+let shore = 92;
+let mobileHudBottom = 0;
+let tick = 0;
+let round = 1042;
+let multiplier = 1;
+let heat = 0;
+let state = "betting";
+let ceiling = 2.9;
+let roundStartedAt = 0;
+let phaseStartedAt = 0;
+let liveStartedAt = 0;
+let liveDuration = 23000;
+let shark = { x: 640, y: 320, a: 0, speed: 0 };
+let sharkPath = [];
+let secondaryPasses = [];
+let secondarySharks = [];
+let sweepSharks = [];
+let seed = "";
+let seedHash = "";
+let swimmers = [];
+let particles = [];
+let floatingLabels = [];
+let cashoutLabelBurst = null;
+let feed = [];
+let playerBet = null;
+let marketBets = {};
+let cashoutEvents = [];
+let takenEvents = [];
+let marketResults = {};
+let lastMarketResult = null;
+let balance = 1000;
+let pool = 0;
+let selectedMarketStake = 25;
+let playerThreat = 0;
+let audioCtx = null;
+let masterGain = null;
+let musicGain = null;
+let effectsGain = null;
+let musicDroneGain = null;
+let musicDroneFilter = null;
+let musicStep = 0;
+let soundEnabled = false;
+let nextPulseAt = 0;
+let lastFrameAt = performance.now();
+let crowdBetsManualOpen = false;
+
+const PHASE_MS = {
+  betting: 9000,
+  locked: 1200,
+  resolution: 3600
+};
+
+const TARGET_RTP = .96;
+const MAX_CEILING = 250;
+const MIN_CEILING = 1.01;
+const MULTIPLIER_GROWTH_MS = 20000;
+const RESULT_CARD_DELAY_MS = 1500;
+const MUSIC_BASS = [73.42, 55, 65.41, 43.65];
+const MUSIC_MELODY = [293.66, 349.23, 440, 392, 349.23, 293.66, 261.63, 293.66];
+const MUSIC_CHORDS = [
+  [73.42, 87.31, 110],
+  [58.27, 73.42, 87.31],
+  [65.41, 82.41, 98],
+  [55, 65.41, 82.41]
+];
+
+const MARKET_META = {
+  panic: { name: "Panic Cashout", odds: 2.35, targetProbability: .409 },
+  last:  { name: "Hero Exit",     odds: 3.43, targetProbability: .280 },
+  quick: { name: "Shark Frenzy",  odds: 3.20, targetProbability: .300 },
+  clean: { name: "Clean Escape",  odds: 3.24, targetProbability: .296 }
+};
+
+function money(value) {
+  return "$" + Math.round(value).toLocaleString();
+}
+
+function signedMoney(value) {
+  const amount = money(Math.abs(value));
+  return value > 0 ? "+" + amount : value < 0 ? "-" + amount : "+$0";
+}
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = Math.max(320, Math.floor(rect.width));
+  H = Math.max(500, Math.floor(rect.height));
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  canvas.style.height = H + "px";
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  shore = Math.max(92, W * .215);
+  if (window.matchMedia("(max-width: 900px)").matches) {
+    const multiplierRect = ui.multiplier.closest(".multiplier").getBoundingClientRect();
+    const threatRect = ui.stageThreat.getBoundingClientRect();
+    mobileHudBottom = Math.max(multiplierRect.bottom, threatRect.bottom) - rect.top + 6;
+  } else {
+    mobileHudBottom = 0;
+  }
+}
+
+function swimmerTopLimit() {
+  return mobileHudBottom ? mobileHudBottom + 28 : H * .13;
+}
+
+function sharkTopLimit() {
+  return mobileHudBottom ? mobileHudBottom + 96 : H * .1;
+}
+
+function rnd(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function color(hexA, hexB, t) {
+  const n = s => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+  const a = n(hexA);
+  const b = n(hexB);
+  return `rgb(${Math.round(lerp(a[0], b[0], t))}, ${Math.round(lerp(a[1], b[1], t))}, ${Math.round(lerp(a[2], b[2], t))})`;
+}
+
+function hashText(text) {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+}
+
+function seededRng(text) {
+  let a = parseInt(hashText(text).slice(0, 8), 16);
+  return function() {
+    a |= 0;
+    a = a + 0x6d2b79f5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function rngBetween(rng, min, max) {
+  return min + rng() * (max - min);
+}
+
+function phaseElapsed() {
+  return performance.now() - phaseStartedAt;
+}
+
+function beachTarget() {
+  return {
+    x: rnd(Math.max(34, shore * .42), Math.max(44, shore * .78)),
+    y: rnd(swimmerTopLimit(), H * .91)
+  };
+}
+
+function visibleShorelineX(y) {
+  const progress = clamp(y / H, 0, 1);
+  return W * (.155 + progress * .045 + Math.sin(progress * Math.PI * 2.2) * .006);
+}
+
+function updateControlDeck() {
+  const panel = ui.controlPanel;
+  if (!panel) return;
+  const marketCount = Object.keys(marketBets).length;
+  const committed = Boolean(playerBet);
+  const marketLocked = state !== "betting";
+  const deckState = state === "live"
+    ? "deck-live"
+    : state === "resolution"
+      ? "deck-resolution"
+      : committed
+        ? "deck-committed"
+        : "deck-betting";
+
+  panel.classList.remove("deck-betting", "deck-committed", "deck-live", "deck-resolution");
+  panel.classList.add(deckState);
+  document.body.classList.toggle("player-active", Boolean(playerBet && !playerBet.done && playerBet.swimmer?.state === "swimming"));
+  panel.classList.toggle("passive-watch", state === "live" && (!playerBet || playerBet.done));
+  panel.classList.toggle("crowd-open", crowdBetsManualOpen || committed || marketCount > 0 || state === "live" || state === "resolution");
+  panel.classList.toggle("crowd-locked", marketLocked);
+
+  ui.placeBet.textContent = committed ? "Bet Placed" : "Join The Water";
+  if (state === "live") {
+    ui.cashOut.textContent = playerBet && !playerBet.done
+      ? `Cash Out · ${money(playerBet.stake * multiplier)}`
+      : playerBet?.done ? "Cashed Out - watching round" : "Watching Live - join next round";
+  } else {
+    ui.cashOut.textContent = "Cash Out";
+  }
+
+  if (ui.crowdState) {
+    ui.crowdState.textContent = state === "resolution"
+      ? "Markets settled"
+      : marketLocked
+        ? "Locked · watching outcomes"
+        : marketCount > 0
+          ? `${marketCount} side bet${marketCount === 1 ? "" : "s"} placed`
+          : committed
+            ? "Add side bets before lock"
+            : "Optional side markets";
+  }
+  if (ui.crowdToggle) ui.crowdToggle.textContent = panel.classList.contains("crowd-open") ? "−" : "+";
+
+  ui.markets.forEach(button => {
+    button.disabled = marketLocked || Boolean(marketBets[button.dataset.market]);
+  });
+  ui.marketChips.forEach(button => button.disabled = marketLocked);
+  ui.marketStakeInput.disabled = marketLocked;
+  ui.stake.disabled = state !== "betting" || committed;
+  ui.playerCount.disabled = state !== "betting" || committed;
+}
+
+function setPhase(next) {
+  state = next;
+  phaseStartedAt = performance.now();
+  document.body.classList.remove("phase-betting", "phase-locked", "phase-live", "phase-resolution");
+  document.body.classList.add(`phase-${next}`);
+  ui.status.textContent = next.toUpperCase();
+  ui.status.style.color = next === "live" ? "var(--green)" : next === "resolution" ? "var(--red)" : "var(--cyan)";
+  updateControlDeck();
+}
+
+function feedTime() {
+  if (liveStartedAt && (state === "live" || state === "resolution")) {
+    return ((performance.now() - liveStartedAt) / 1000).toFixed(1) + "s";
+  }
+  return (phaseElapsed() / 1000).toFixed(1) + "s";
+}
+
+function addFeed(text, cls = "") {
+  feed.unshift({ text, cls, time: feedTime() });
+  feed = feed.slice(0, 9);
+  ui.feed.innerHTML = feed.map(item => `<div class="feed-row ${item.cls}"><span>${item.text}</span><small>${item.time}</small></div>`).join("");
+}
+
+function enableAudio() {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      audioCtx = new AudioContext();
+      masterGain = audioCtx.createGain();
+      musicGain = audioCtx.createGain();
+      effectsGain = audioCtx.createGain();
+      masterGain.gain.value = soundEnabled ? .82 : .0001;
+      musicGain.gain.value = Number(ui.musicVolume.value) / 100;
+      effectsGain.gain.value = Number(ui.effectsVolume.value) / 100;
+      musicGain.connect(masterGain);
+      effectsGain.connect(masterGain);
+      masterGain.connect(audioCtx.destination);
+
+      const droneA = audioCtx.createOscillator();
+      const droneB = audioCtx.createOscillator();
+      musicDroneFilter = audioCtx.createBiquadFilter();
+      musicDroneGain = audioCtx.createGain();
+      droneA.type = "sine";
+      droneB.type = "triangle";
+      droneA.frequency.value = 43.65;
+      droneB.frequency.value = 65.41;
+      droneB.detune.value = -8;
+      musicDroneFilter.type = "lowpass";
+      musicDroneFilter.frequency.value = 330;
+      musicDroneFilter.Q.value = 1.8;
+      musicDroneGain.gain.value = .05;
+      droneA.connect(musicDroneFilter);
+      droneB.connect(musicDroneFilter);
+      musicDroneFilter.connect(musicDroneGain);
+      musicDroneGain.connect(musicGain);
+      droneA.start();
+      droneB.start();
+    }
+  }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function playTone(freq, duration = .08, type = "sine", gain = .04) {
+  if (!audioCtx || !soundEnabled) return;
+  const osc = audioCtx.createOscillator();
+  const amp = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  amp.gain.value = gain;
+  osc.connect(amp);
+  amp.connect(effectsGain);
+  const now = audioCtx.currentTime;
+  amp.gain.setValueAtTime(gain, now);
+  amp.gain.exponentialRampToValueAtTime(.0001, now + duration);
+  osc.start(now);
+  osc.stop(now + duration + .02);
+}
+
+function musicTone(freq, duration, type = "triangle", gain = .018, delay = 0) {
+  if (!audioCtx || !soundEnabled) return;
+  const now = audioCtx.currentTime + delay;
+  const osc = audioCtx.createOscillator();
+  const amp = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, now);
+  amp.gain.setValueAtTime(.0001, now);
+  amp.gain.exponentialRampToValueAtTime(Math.max(.0002, gain), now + .012);
+  amp.gain.exponentialRampToValueAtTime(.0001, now + duration);
+  osc.connect(amp);
+  amp.connect(musicGain);
+  osc.start(now);
+  osc.stop(now + duration + .03);
+}
+
+function musicChord(notes, gain = .009, duration = 2.8) {
+  notes.forEach((freq, index) => musicTone(freq * 2, duration, index === 1 ? "triangle" : "sine", gain, index * .025));
+}
+
+function playMusicSting(kind) {
+  if (!soundEnabled) return;
+  if (kind === "strike") {
+    [293.66, 349.23, 440, 523.25].forEach((note, index) => musicTone(note, .5, "triangle", .03, index * .075));
+    musicChord(MUSIC_CHORDS[0], .018, 1.1);
+  } else {
+    [293.66, 261.63, 220, 293.66].forEach((note, index) => musicTone(note, .65, "triangle", .018, index * .16));
+    musicChord(MUSIC_CHORDS[0], .014, 2.4);
+  }
+}
+
+function updateAudioPulse(now) {
+  if (!audioCtx || !soundEnabled) return;
+  if (musicDroneFilter) musicDroneFilter.frequency.setTargetAtTime(330 - heat * 170, audioCtx.currentTime, .3);
+  if (musicDroneGain) musicDroneGain.gain.setTargetAtTime(state === "live" ? .05 + heat * .02 : .035, audioCtx.currentTime, .3);
+  const interval = Math.max(260, 950 - heat * 620);
+  if (now >= nextPulseAt) {
+    if (state === "live") {
+      playTone(70 + heat * 80, .06, "sine", .026 + heat * .018);
+      if (heat > .42) playTone(118 + heat * 42, .07, "triangle", .012);
+    }
+
+    const chordIndex = Math.floor(musicStep / 8) % MUSIC_CHORDS.length;
+    if (musicStep % 16 === 0 || (heat > .72 && musicStep % 16 === 8)) {
+      musicChord(MUSIC_CHORDS[chordIndex], .006 + heat * .006, heat > .72 ? 1.6 : 3.2);
+    }
+    const bassEvery = state === "live" ? (heat > .7 ? 2 : 4) : 6;
+    if (musicStep % bassEvery === 0) {
+      const index = Math.floor(musicStep / bassEvery) % MUSIC_BASS.length;
+      musicTone(MUSIC_BASS[index], .55, "triangle", .015 + heat * .012);
+    }
+    const melodyEvery = state === "live" ? (heat > .7 ? 1 : heat > .3 ? 2 : 4) : 7;
+    if (musicStep % melodyEvery === 0) {
+      const index = Math.floor(musicStep / melodyEvery) % MUSIC_MELODY.length;
+      musicTone(MUSIC_MELODY[index], .42, "triangle", .008 + heat * .011);
+    }
+    musicStep++;
+    nextPulseAt = now + interval;
+  }
+}
+
+function depthLabel(y) {
+  const k = clamp((y - H * .14) / (H * .9 - H * .14), 0, 1);
+  if (k < .34) return "Deep";
+  if (k < .68) return "Mid";
+  return "Shallow";
+}
+
+function sharkCollisionRadius(swimmer) {
+  return 30 + swimmer.size * 8;
+}
+
+function swimmerThreatState(swimmer) {
+  if (state !== "live" || swimmer.state !== "swimming") return { label: "CALM", cls: "calm" };
+  const threats = [shark, ...secondarySharks].filter(s => s && s.x > shore + 10);
+  let nearest = Infinity;
+  threats.forEach(s => {
+    nearest = Math.min(nearest, Math.hypot(swimmer.x - s.x, swimmer.y - s.y));
+  });
+  if (nearest < 95) return { label: "DANGER", cls: "danger" };
+  if (nearest < 165) return { label: "NEAR", cls: "near" };
+  return { label: "CALM", cls: "calm" };
+}
+
+function generateCeiling(rng) {
+  const roll = rng();
+  const raw = TARGET_RTP / Math.max(.000001, 1 - roll);
+  return clamp(raw, MIN_CEILING, MAX_CEILING);
+}
+
+function sampleBotCashout(rng) {
+  const dreamCap = Math.max(1.1, Math.min(ceiling * .92, 90));
+  const pick = (min, max) => rngBetween(rng, Math.min(min, dreamCap), Math.min(Math.max(max, min + .05), dreamCap));
+  if (dreamCap < 1.25) return rngBetween(rng, 1.05, dreamCap);
+  const roll = rng();
+  if (roll < .66 || dreamCap < 3.4) return pick(1.16, 3.4);
+  if (roll < .9 || dreamCap < 8.5) return pick(3.4, 8.5);
+  if (roll < .985 || dreamCap < 24) return pick(8.5, 24);
+  return pick(24, dreamCap);
+}
+
+function playerThreatState() {
+  if (!playerBet || !playerBet.swimmer) return { label: "No swimmer", cls: "threat-calm", level: 0 };
+  const swimmer = playerBet.swimmer;
+  if (swimmer.state === "safe") return { label: "Safe shore", cls: "threat-calm", level: 0 };
+  if (swimmer.state === "taken" || swimmer.state === "doomed") return { label: "Taken", cls: "threat-danger", level: 1 };
+  if (playerBet.done) return { label: "Settled", cls: "threat-calm", level: 0 };
+  if (state !== "live" || swimmer.state !== "swimming") return { label: depthLabel(swimmer.y), cls: "threat-calm", level: 0 };
+
+  const threats = [shark, ...secondarySharks].filter(s => s && s.x > shore + 10);
+  let nearest = Infinity;
+  threats.forEach(s => {
+    const d = Math.hypot(swimmer.x - s.x, swimmer.y - s.y);
+    if (d < nearest) nearest = d;
+  });
+  const level = clamp((185 - nearest) / 125, 0, 1);
+  if (level > .72) return { label: "Danger close", cls: "threat-danger", level };
+  if (level > .32) return { label: "Shark near", cls: "threat-near", level };
+  return { label: "Calm water", cls: "threat-calm", level };
+}
+
+function updatePlayerThreat() {
+  const threat = playerThreatState();
+  playerThreat = threat.level;
+  ui.threatLevel.textContent = threat.label;
+  ui.threatLevel.className = threat.cls;
+  let stageThreat = threat;
+  if (!playerBet) {
+    stageThreat = state === "resolution"
+      ? { label: "Final sweep", cls: "threat-danger" }
+      : state === "live" && heat > .55
+        ? { label: "Closing in", cls: "threat-danger" }
+        : state === "live"
+          ? { label: "Hunting", cls: "threat-near" }
+          : state === "locked"
+            ? { label: "Sharks approaching", cls: "threat-near" }
+            : { label: "Calm water", cls: "threat-calm" };
+  }
+  ui.stageThreat.className = `threat-banner ${stageThreat.cls}`;
+  ui.stageThreatValue.textContent = stageThreat.label;
+}
+
+function addFloatingLabel(text, x, y, cls = "green") {
+  floatingLabels.push({
+    text,
+    x,
+    y: y - 22,
+    vy: -.35,
+    life: 60,
+    max: 60,
+    cls
+  });
+}
+
+function addCrowdCashoutLabel(x, y) {
+  const now = performance.now();
+  if (cashoutLabelBurst && now - cashoutLabelBurst.updatedAt < 500 && cashoutLabelBurst.label.life > 0) {
+    cashoutLabelBurst.count += 1;
+    cashoutLabelBurst.updatedAt = now;
+    cashoutLabelBurst.label.text = `+${cashoutLabelBurst.count} cashed at ${multiplier.toFixed(2)}x`;
+    cashoutLabelBurst.label.x = lerp(cashoutLabelBurst.label.x, x, .25);
+    cashoutLabelBurst.label.y = lerp(cashoutLabelBurst.label.y, y - 22, .25);
+    cashoutLabelBurst.label.life = 70;
+    cashoutLabelBurst.label.max = 70;
+    return;
+  }
+
+  addFloatingLabel(`1 swimmer cashed at ${multiplier.toFixed(2)}x`, x, y, "green");
+  cashoutLabelBurst = {
+    count: 1,
+    updatedAt: now,
+    label: floatingLabels[floatingLabels.length - 1]
+  };
+}
+
+function createSwimmers() {
+  const rng = seededRng(seed + ":players");
+  const selected = Number(ui.playerCount.value) || 100;
+  const count = selected + Math.floor(rngBetween(rng, -Math.max(2, selected * .04), Math.max(3, selected * .04)));
+  swimmers = Array.from({ length: count }, (_, i) => {
+    const stake = Math.round(rngBetween(rng, 8, 120));
+    const willJoin = i < Math.min(20, count) || rng() > .16;
+    const joinAt = rngBetween(rng, 350, PHASE_MS.betting - 1100);
+    const highTraffic = count > 250;
+    const massTraffic = count > 700;
+    return {
+      id: i,
+      name: i >= NAMES.length ? `Bot${String(i - NAMES.length + 1).padStart(2, "0")}` : NAMES[i],
+      bot: i >= NAMES.length,
+      x: rngBetween(rng, Math.max(34, shore * .42), Math.max(44, shore * .78)),
+      y: rngBetween(rng, swimmerTopLimit(), H * .9),
+      tx: rngBetween(rng, shore + 54, W - 54),
+      ty: rngBetween(rng, swimmerTopLimit(), H * .9),
+      size: massTraffic ? rngBetween(rng, .32, .48) : highTraffic ? rngBetween(rng, .42, .62) : rngBetween(rng, .58, .82),
+      lod: massTraffic ? "dot" : highTraffic ? (i % 4 === 0 ? "full" : "mini") : (i % 3 === 0 ? "mini" : "full"),
+      state: willJoin ? "shore" : "spectator",
+      progress: 0,
+      joinAt,
+      speed: rngBetween(rng, .012, .024),
+      cashout: sampleBotCashout(rng),
+      stake,
+      returnAmount: 0,
+      flash: 0,
+      phase: rngBetween(rng, 0, 10),
+      settled: false
+    };
+  });
+  pool = 0;
+}
+
+function resetRound() {
+  round += 1;
+  tick = 0;
+  multiplier = 1;
+  heat = 0;
+  roundStartedAt = performance.now();
+  phaseStartedAt = roundStartedAt;
+  liveStartedAt = 0;
+  seed = `shore-${round}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  seedHash = hashText(seed + ":commitment");
+  const rng = seededRng(seed + ":round");
+  ceiling = generateCeiling(rng);
+  liveDuration = rngBetween(rng, 17000, 29000) + Math.log2(Math.max(1.15, ceiling)) * 5500;
+  sharkPath = generateSharkPath(rng);
+  secondaryPasses = generateSecondaryPasses(rng);
+  shark = { x: sharkPath[0].x, y: sharkPath[0].y, a: 0, speed: .012 };
+  secondarySharks = [];
+  sweepSharks = [];
+  particles = [];
+  floatingLabels = [];
+  cashoutLabelBurst = null;
+  feed = [];
+  ui.feed.innerHTML = "";
+  document.querySelector(".side-lower").scrollTop = 0;
+  playerBet = null;
+  marketBets = {};
+  cashoutEvents = [];
+  takenEvents = [];
+  marketResults = {};
+  lastMarketResult = null;
+  playerThreat = 0;
+  crowdBetsManualOpen = false;
+  createSwimmers();
+  ui.toast.classList.remove("show");
+  ui.toastTitle.textContent = "SHARK STRIKE";
+  setPhase("betting");
+  ui.placeBet.disabled = false;
+  ui.cashOut.disabled = true;
+  ui.seed.textContent = "hidden until resolution";
+  ui.hash.textContent = seedHash;
+  ui.ceiling.textContent = "hidden until resolution";
+  ui.rtp.textContent = (TARGET_RTP * 100).toFixed(2) + "% target";
+  ui.swimmerDepth.textContent = "Not placed";
+  ui.threatLevel.textContent = "No swimmer";
+  ui.threatLevel.className = "threat-calm";
+  ui.stageThreat.className = "threat-banner threat-calm";
+  ui.stageThreatValue.textContent = "No swimmer";
+  if (ui.marketStake) ui.marketStake.textContent = money(selectedMarketStake);
+  ui.marketStakeInput.value = selectedMarketStake;
+  ui.ticketResult.textContent = "No open ticket";
+  ui.markets.forEach(button => {
+    const meta = MARKET_META[button.dataset.market];
+    if (meta) button.querySelector("span").textContent = meta.odds.toFixed(2).replace(/\.00$/, "") + "x";
+  });
+  ui.fairPanel.classList.add("collapsed");
+  ui.fairStatus.textContent = "HASH";
+  ui.markets.forEach(button => {
+    button.disabled = false;
+    button.classList.remove("active", "green", "red");
+  });
+}
+
+function generateSharkPath(rng) {
+  const points = [];
+  const passes = Math.floor(rngBetween(rng, 16, 24));
+  for (let i = 0; i < passes; i++) {
+    points.push({
+      t: (i / (passes - 1)) * liveDuration,
+      x: rngBetween(rng, shore + 72, W - 58),
+      y: rngBetween(rng, sharkTopLimit(), H * .9)
+    });
+  }
+  return points;
+}
+
+function generateSecondaryPasses(rng) {
+  const traffic = Number(ui.playerCount.value) || 100;
+  const count = Math.floor(rngBetween(rng, traffic > 400 ? 4 : 2, traffic > 400 ? 8 : 5));
+  const waterLeft = shore + 92;
+  const waterTop = sharkTopLimit();
+  const passes = [];
+  for (let i = 0; i < count; i++) {
+    const side = Math.floor(rngBetween(rng, 0, 3));
+    const target = {
+      x: rngBetween(rng, waterLeft + 20, W - 72),
+      y: rngBetween(rng, waterTop, H - 52)
+    };
+    const start = side === 0
+      ? { x: W + 120, y: target.y + rngBetween(rng, -80, 80) }
+      : side === 1
+        ? { x: rngBetween(rng, waterLeft + 30, W - 80), y: H + 110 }
+        : { x: rngBetween(rng, waterLeft + 30, W - 80), y: waterTop - 110 };
+    const end = {
+      x: clamp(target.x + (target.x - start.x) * .85 + rngBetween(rng, -40, 40), waterLeft, W + 130),
+      y: target.y + (target.y - start.y) * .85 + rngBetween(rng, -40, 40)
+    };
+    passes.push({
+      id: i,
+      t: rngBetween(rng, 7000, Math.max(8500, liveDuration - 7500)),
+      duration: rngBetween(rng, 3500, 6000),
+      start,
+      target,
+      end,
+      scale: rngBetween(rng, .48, .66),
+      phase: rngBetween(rng, 0, 12),
+      active: false,
+      done: false
+    });
+  }
+  return passes.sort((a, b) => a.t - b.t);
+}
+
+function spawnBubble(x, y, amount, tint = "255,255,255") {
+  for (let i = 0; i < amount; i++) {
+    particles.push({
+      x: x + rnd(-10, 10),
+      y: y + rnd(-8, 8),
+      vx: rnd(-.35, .35),
+      vy: rnd(-1.3, -.35),
+      r: rnd(1, 3.5),
+      life: rnd(32, 80),
+      max: 80,
+      tint
+    });
+  }
+}
+
+function drawStageBackground() {
+  if (desktopStageImage.complete && desktopStageImage.naturalWidth) {
+    const sourceRatio = desktopStageImage.naturalWidth / desktopStageImage.naturalHeight;
+    const stageRatio = W / H;
+    let sx = 0;
+    let sy = 0;
+    let sw = desktopStageImage.naturalWidth;
+    let sh = desktopStageImage.naturalHeight;
+    if (sourceRatio > stageRatio) {
+      sw = sh * stageRatio;
+      sx = (desktopStageImage.naturalWidth - sw) * .38;
+    } else {
+      sh = sw / stageRatio;
+      sy = (desktopStageImage.naturalHeight - sh) * .5;
+    }
+    ctx.drawImage(desktopStageImage, sx, sy, sw, sh, 0, 0, W, H);
+  } else {
+    const fallback = ctx.createLinearGradient(0, 0, W, 0);
+    fallback.addColorStop(0, "#e8c16b");
+    fallback.addColorStop(.22, "#21c8c5");
+    fallback.addColorStop(1, "#063b75");
+    ctx.fillStyle = fallback;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.save();
+  ctx.globalAlpha = .08;
+  ctx.strokeStyle = "#d9ffff";
+  ctx.lineWidth = 1;
+  for (let layer = 0; layer < 8; layer++) {
+    const y = H * (.12 + layer * .115);
+    ctx.beginPath();
+    for (let x = shore; x <= W + 8; x += 8) {
+      const yy = y + Math.sin(x * .018 + tick * .028 + layer) * 3;
+      if (x === shore) ctx.moveTo(x, yy);
+      else ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawStandingHuman(p) {
+  const isPlayer = p.id === "you";
+  const shirts = ["#e55e55", "#eeb749", "#38a9c6", "#5fbd77", "#e27ba0", "#668bd5", "#e98248"];
+  const shirt = isPlayer ? "#4aa8ff" : shirts[Math.abs(Number(p.id) || 0) % shirts.length];
+  const step = Math.sin(tick * .09 + p.phase) * 1.5;
+  const scale = p.size * (p.state === "safe" ? .68 : .76);
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = "rgba(45, 30, 15, .28)";
+  ctx.beginPath();
+  ctx.ellipse(2, 8, 7, 3, -.25, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#d9a47d";
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-2, 5);
+  ctx.lineTo(-4 - step, 12);
+  ctx.moveTo(2, 5);
+  ctx.lineTo(4 + step, 12);
+  ctx.moveTo(-5, -1);
+  ctx.lineTo(-9, 5 + step);
+  ctx.moveTo(5, -1);
+  ctx.lineTo(9, 5 - step);
+  ctx.stroke();
+
+  ctx.fillStyle = shirt;
+  ctx.beginPath();
+  ctx.roundRect(-6, -5, 12, 13, 5);
+  ctx.fill();
+
+  ctx.fillStyle = "#efb785";
+  ctx.beginPath();
+  ctx.arc(0, -10, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(58, 35, 27, .78)";
+  ctx.beginPath();
+  ctx.arc(0, -11, 4, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMiniSwimmer(p) {
+  const isPlayer = p.id === "you";
+  const shirts = ["#e55e55", "#eeb749", "#38a9c6", "#5fbd77", "#e27ba0", "#668bd5", "#e98248"];
+  const shirt = isPlayer ? "#4aa8ff" : shirts[Math.abs(Number(p.id) || 0) % shirts.length];
+  const danger = p.state === "taken" || p.state === "doomed";
+  const facing = (p.tx ?? p.x + 1) >= p.x ? 1 : -1;
+  const bob = Math.sin(tick * .065 + p.phase) * .7;
+  const scale = p.size * .82;
+
+  ctx.save();
+  ctx.translate(p.x, p.y + bob);
+  ctx.scale(facing * scale, scale);
+  ctx.globalAlpha = p.state === "joining" ? clamp(.35 + p.progress, .25, 1) : .92;
+
+  ctx.fillStyle = "rgba(2, 29, 45, .3)";
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 13, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = danger ? "#ff7a80" : "#efb785";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-4, -2);
+  ctx.lineTo(-11, 2);
+  ctx.moveTo(5, -2);
+  ctx.lineTo(12, 1);
+  ctx.stroke();
+
+  ctx.fillStyle = danger ? "#ff5b66" : shirt;
+  ctx.beginPath();
+  ctx.roundRect(-5, -6, 11, 15, 5);
+  ctx.fill();
+
+  ctx.fillStyle = danger ? "#ff7a80" : "#efb785";
+  ctx.beginPath();
+  ctx.arc(1, -11, 4.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHuman(p) {
+  if (p.lod === "dot" && p.id !== "you" && p.flash <= 0) {
+    drawCrowdMarker(p);
+    return;
+  }
+  const inWater = p.x > visibleShorelineX(p.y) + 7 && (p.state === "swimming" || p.state === "joining" || p.state === "safe" || p.state === "doomed" || p.state === "taken");
+  if (!inWater) {
+    drawStandingHuman(p);
+    return;
+  }
+  if (p.lod === "mini" && p.id !== "you" && p.flash <= 0) {
+    drawMiniSwimmer(p);
+    return;
+  }
+  const stroke = Math.sin(tick * .1 + p.phase);
+  const bob = Math.sin(tick * .07 + p.phase) * 1.1;
+  const isPlayer = p.id === "you";
+  const shirts = ["#e55e55", "#eeb749", "#38a9c6", "#5fbd77", "#e27ba0", "#668bd5", "#e98248"];
+  const shirt = isPlayer ? "#4aa8ff" : shirts[Math.abs(Number(p.id) || 0) % shirts.length];
+  const facing = (p.tx ?? p.x + 1) >= p.x ? 1 : -1;
+  const poseRoll = Math.abs(Number(p.id) || 0) % 10;
+  const pose = poseRoll < 6 ? 0 : poseRoll < 9 ? 1 : 2;
+  const actorScale = p.size * (p.state === "safe" ? .7 : .84);
+  ctx.save();
+  ctx.translate(p.x, p.y + bob);
+  ctx.scale(facing * actorScale, actorScale);
+  ctx.globalAlpha = p.state === "joining" ? clamp(.35 + p.progress, .25, 1) : 1;
+
+  // Soft underwater reflection and wake anchor the upright swimmer to the sea.
+  ctx.fillStyle = "rgba(2, 29, 45, .28)";
+  ctx.beginPath();
+  ctx.ellipse(-2, 12, 17, 7, -.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(224, 255, 255, .28)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(-7, 10, 15 + stroke, -.55, .75);
+  ctx.stroke();
+
+  if (isPlayer && p.state !== "taken") {
+    ctx.save();
+    ctx.scale(facing / actorScale, 1 / actorScale);
+    const pulse = 27 + Math.sin(tick * (.12 + playerThreat * .18)) * (3 + playerThreat * 6);
+    const threatColour = playerThreat > .72 ? "#ff5b66" : playerThreat > .32 ? "#f4c863" : "#4aa8ff";
+    const ringColour = playerThreat > .72 ? "rgba(255, 91, 102, .98)" : playerThreat > .32 ? "rgba(244, 200, 99, .96)" : "rgba(74, 168, 255, .96)";
+    ctx.globalAlpha = .16 + playerThreat * .2;
+    ctx.fillStyle = threatColour;
+    ctx.beginPath();
+    ctx.arc(0, -3, pulse + 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = ringColour;
+    ctx.lineWidth = 3 + playerThreat * 3;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(0, -3, pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    if (playerThreat > .25) {
+      ctx.globalAlpha = playerThreat * .28;
+      ctx.fillStyle = playerThreat > .72 ? "#ff5b66" : "#f4c863";
+      ctx.beginPath();
+      ctx.arc(0, -3, pulse + 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.setLineDash([]);
+    ctx.font = "800 10px 'Roboto Mono', ui-monospace, monospace";
+    const tag = "YOU";
+    const tagW = ctx.measureText(tag).width + 12;
+    ctx.fillStyle = "rgba(4, 13, 19, .82)";
+    ctx.strokeStyle = ringColour;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-tagW / 2, -46, tagW, 18, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = threatColour;
+    ctx.fillText(tag, -ctx.measureText(tag).width / 2, -33);
+    ctx.restore();
+  }
+
+  if (p.flash > 0) {
+    ctx.globalAlpha = p.flash % 8 < 4 ? .55 : 1;
+    ctx.fillStyle = p.state === "safe" ? "rgba(83,225,157,.2)" : "rgba(255,91,102,.24)";
+    ctx.beginPath();
+    ctx.arc(0, -5, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const danger = p.state === "taken" || p.state === "doomed";
+  const skin = danger ? "#ff7a80" : "#efb785";
+
+  // Bent legs skim the surface, matching the friendly three-quarter mockup style.
+  ctx.save();
+  ctx.globalAlpha *= .38;
+  ctx.strokeStyle = skin;
+  ctx.lineWidth = 3.1;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-5, 8);
+  ctx.quadraticCurveTo(-12, 11 + stroke * 2, -16, 7 + stroke * 3);
+  ctx.quadraticCurveTo(-19, 5 + stroke * 2, -21, 9);
+  ctx.moveTo(2, 9);
+  ctx.quadraticCurveTo(-4, 14 - stroke * 2, -9, 12 - stroke * 3);
+  ctx.quadraticCurveTo(-12, 11 - stroke * 2, -14, 15);
+  ctx.stroke();
+  ctx.restore();
+
+  // Raised torso gives the swimmer a readable person-like silhouette.
+  ctx.fillStyle = danger ? "#ff5b66" : shirt;
+  ctx.beginPath();
+  ctx.roundRect(-7, -7, 15, 19, 6);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(6, 41, 58, .28)";
+  ctx.beginPath();
+  ctx.ellipse(0, 11, 9, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // A translucent waterline hides the lower body and sells submersion.
+  ctx.fillStyle = "rgba(26, 146, 170, .2)";
+  ctx.beginPath();
+  ctx.ellipse(0, 9, 11, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pose variants alter the paddle without freely rotating the whole figure.
+  ctx.strokeStyle = skin;
+  ctx.lineWidth = 3.6;
+  ctx.beginPath();
+  if (pose === 0) {
+    ctx.moveTo(-4, -4);
+    ctx.quadraticCurveTo(-11, -7 - stroke * 2, -15, -2 - stroke * 2);
+    ctx.moveTo(6, -3);
+    ctx.quadraticCurveTo(13, -6 + stroke * 2, 16, -1 + stroke * 2);
+  } else if (pose === 1) {
+    ctx.moveTo(-4, -4);
+    ctx.quadraticCurveTo(-12, -1 - stroke * 2, -14, 4 - stroke);
+    ctx.moveTo(6, -3);
+    ctx.quadraticCurveTo(12, -10 + stroke * 2, 17, -6 + stroke);
+  } else {
+    ctx.moveTo(-4, -4);
+    ctx.quadraticCurveTo(-10, -10 - stroke, -15, -6 - stroke);
+    ctx.moveTo(6, -3);
+    ctx.quadraticCurveTo(12, 0 + stroke, 16, 4 + stroke);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.arc(2, -13, 5.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(58, 35, 27, .78)";
+  ctx.beginPath();
+  ctx.arc(1, -15, 4.5, Math.PI, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCrowdMarker(p) {
+  const colour = p.state === "safe" ? "#78db76" : p.state === "taken" || p.state === "doomed" ? "#ff655f" : p.state === "joining" || p.state === "spectator" || p.state === "shore" ? "#a7adb0" : "#51e3b0";
+  const bob = p.x > shore + 12 ? Math.sin(tick * .08 + p.phase) * 1.4 : 0;
+  ctx.save();
+  ctx.globalAlpha = p.state === "joining" ? clamp(.3 + p.progress, .25, .85) : .82;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y + bob, 2.6 + p.size * 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,.16)";
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y + bob + 8, 6, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function sharkVisualScale() {
+  return mobileHudBottom ? .76 : 1;
+}
+
+function drawSharkBody(model = shark, scaleBoost = 1, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(model.x, model.y);
+  const wobble = Math.sin(tick * .014 + (model.phase || 0)) * .085;
+  ctx.rotate(model.a + wobble);
+  const pulse = 1 + heat * .18 + Math.sin(tick * .08) * .025;
+  const viewportScale = sharkVisualScale();
+  ctx.scale(pulse * scaleBoost * viewportScale, pulse * scaleBoost * viewportScale);
+  const variant = model.variant || "primary";
+  const palette = variant === "secondary"
+    ? { aura: "255, 141, 86", body0: "#173844", body1: "#5d8790", body2: "#102933", fin: "#315d68" }
+    : variant === "sweep"
+      ? { aura: "255, 33, 45", body0: "#101f28", body1: "#466b78", body2: "#091820", fin: "#254653" }
+      : { aura: "255, 33, 45", body0: "#122d38", body1: "#668e98", body2: "#0b2029", fin: "#315563" };
+
+  ctx.strokeStyle = `rgba(220, 252, 255, ${.34 * alpha})`;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(-48, -12);
+  ctx.quadraticCurveTo(-82, -21, -116, -10);
+  ctx.moveTo(-48, 12);
+  ctx.quadraticCurveTo(-82, 21, -116, 10);
+  ctx.stroke();
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, 95);
+  aura.addColorStop(0, `rgba(${palette.aura}, ${(.18 + heat * .18) * alpha})`);
+  aura.addColorStop(1, `rgba(${palette.aura}, 0)`);
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(0, 0, 95, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(0, 12, 24, .34)";
+  ctx.beginPath();
+  ctx.ellipse(-4, 9, 70, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = palette.fin;
+  ctx.beginPath();
+  ctx.moveTo(-10, -12);
+  ctx.quadraticCurveTo(-26, -48, 12, -19);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-10, 12);
+  ctx.quadraticCurveTo(-26, 48, 12, 19);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = palette.body2;
+  ctx.beginPath();
+  ctx.moveTo(-52, 0);
+  ctx.lineTo(-88, -24);
+  ctx.lineTo(-78, 0);
+  ctx.lineTo(-88, 24);
+  ctx.closePath();
+  ctx.fill();
+
+  const body = ctx.createLinearGradient(-60, -18, 64, 18);
+  body.addColorStop(0, palette.body0);
+  body.addColorStop(.45, palette.body1);
+  body.addColorStop(1, palette.body2);
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-62, 0);
+  ctx.bezierCurveTo(-38, -23, 34, -25, 68, 0);
+  ctx.bezierCurveTo(34, 25, -38, 23, -62, 0);
+  ctx.fill();
+
+  const dorsal = ctx.createLinearGradient(-6, -28, 16, 10);
+  dorsal.addColorStop(0, "#7399a2");
+  dorsal.addColorStop(1, palette.body2);
+  ctx.fillStyle = dorsal;
+  ctx.beginPath();
+  ctx.moveTo(-8, 0);
+  ctx.quadraticCurveTo(2, -35, 18, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(224, 250, 252, .22)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(42, -9);
+  ctx.quadraticCurveTo(58, 0, 42, 9);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawShark() {
+  drawSharkBody(shark, .82, 1);
+}
+
+function drawSweepSharks() {
+  sweepSharks.forEach(s => {
+    const fade = clamp((s.progress - .02) / .2, 0, 1) * clamp((1.02 - s.progress) / .18, 0, 1);
+    drawSharkBody({ ...s, variant: "sweep" }, s.scale, fade);
+  });
+}
+
+function drawSecondarySharks() {
+  secondarySharks.forEach(s => {
+    const fade = clamp((s.progress - .03) / .18, 0, 1) * clamp((1.03 - s.progress) / .18, 0, 1);
+    drawSharkBody({ ...s, variant: "secondary" }, s.scale, fade);
+  });
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = clamp(p.life / p.max, 0, .7);
+    ctx.fillStyle = `rgba(${p.tint}, .58)`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function updateFloatingLabels() {
+  floatingLabels = floatingLabels.filter(label => label.life > 0);
+  floatingLabels.forEach(label => {
+    label.y += label.vy;
+    label.life--;
+  });
+}
+
+function drawFloatingLabels() {
+  floatingLabels.forEach(label => {
+    const alpha = clamp(label.life / label.max, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = "700 12px 'Roboto Mono', ui-monospace, monospace";
+    const width = ctx.measureText(label.text).width + 18;
+    const x = clamp(label.x - width / 2, shore + 8, W - width - 8);
+    const y = label.y;
+    ctx.fillStyle = label.cls === "green" ? "rgba(5, 38, 28, .88)" : "rgba(45, 9, 13, .88)";
+    ctx.strokeStyle = label.cls === "green" ? "rgba(83, 225, 157, .58)" : "rgba(255, 91, 102, .58)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x, y - 18, width, 25, 7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = label.cls === "green" ? "#53e19d" : "#ff5b66";
+    ctx.fillText(label.text, x + 9, y - 2);
+    ctx.restore();
+  });
+}
+
+function updateRound() {
+  if (state === "betting" && phaseElapsed() > PHASE_MS.betting) {
+    setPhase("locked");
+    ui.placeBet.disabled = true;
+    ui.cashOut.disabled = true;
+    swimmers.forEach(p => {
+      if (p.state === "shore") p.state = "spectator";
+      if (p.state === "joining") {
+        p.x = p.tx;
+        p.y = p.ty;
+        p.state = "swimming";
+      }
+    });
+    multiplier = 1;
+    heat = 0;
+  }
+
+  if (state === "locked" && phaseElapsed() > PHASE_MS.locked) {
+    setPhase("live");
+    liveStartedAt = performance.now();
+    ui.cashOut.disabled = !(playerBet && !playerBet.done);
+  }
+
+  if (state === "live") {
+    const elapsed = performance.now() - liveStartedAt;
+    const target = Math.exp(elapsed / MULTIPLIER_GROWTH_MS);
+    multiplier = Math.min(ceiling, target);
+    heat = clamp(Math.log(multiplier) / Math.log(22), 0, 1);
+    updateSharkPosition(elapsed);
+    updateSecondarySharks(elapsed);
+
+    if (Math.random() < .11 + heat * .12) spawnBubble(shark.x - 45, shark.y + 14, 1);
+
+    // auto cashout now handled by interval respecting toggle
+
+    const active = swimmers.filter(p => p.state === "swimming");
+    if (multiplier >= ceiling) finalStrike("ceiling");
+    else if (elapsed >= liveDuration) finalStrike("timeout");
+    else if (active.length === 0) startResolution("All swimmers out");
+  }
+
+  if (state === "resolution" && phaseElapsed() > PHASE_MS.resolution) {
+    resetRound();
+  }
+
+  if (state === "resolution") {
+    updateSweepSharks();
+  }
+}
+
+function updateSecondarySharks(elapsed) {
+  secondaryPasses.forEach(pass => {
+    if (!pass.active && !pass.done && elapsed >= pass.t) {
+      pass.active = true;
+      secondarySharks.push({
+        ...pass,
+        x: pass.start.x,
+        y: pass.start.y,
+        a: Math.atan2(pass.target.y - pass.start.y, pass.target.x - pass.start.x),
+        progress: 0,
+        hits: new Set()
+      });
+    }
+  });
+
+  secondarySharks = secondarySharks.filter(s => s.progress < 1.04);
+  secondarySharks.forEach(s => {
+    const p = clamp((elapsed - s.t) / s.duration, 0, 1.04);
+    const ease = clamp(p, 0, 1);
+    const bend = ease * ease * (3 - 2 * ease);
+    const oldX = s.x;
+    const oldY = s.y;
+    const midX = lerp(s.start.x, s.target.x, bend);
+    const midY = lerp(s.start.y, s.target.y, bend);
+    s.x = clamp(lerp(midX, s.end.x, Math.max(0, bend - .62) * .55) + Math.sin(tick * .18 + s.phase) * 8, shore + 72, W + 140);
+    s.y = Math.max(sharkTopLimit(), lerp(midY, s.end.y, Math.max(0, bend - .62) * .55) + Math.cos(tick * .15 + s.phase) * 6);
+    s.a = Math.atan2(s.y - oldY, s.x - oldX);
+    s.progress = p;
+    if (p >= 1) {
+      const original = secondaryPasses.find(pass => pass.id === s.id);
+      if (original) original.done = true;
+    }
+
+    if (p > .18 && p < .82) {
+      swimmers.forEach(player => {
+        if (player.state !== "swimming" || s.hits.has(player.id)) return;
+        const dist = Math.hypot(player.x - s.x, player.y - s.y);
+        if (dist < sharkCollisionRadius(player)) {
+          s.hits.add(player.id);
+          player.state = "taken";
+          player.flash = 46;
+          takenEvents.push({ t: performance.now() - liveStartedAt, name: player.name, mult: multiplier, bot: player.bot, secondary: true });
+          if (player.id === "you" && playerBet && !playerBet.done) {
+            playerBet.done = true;
+            ui.cashOut.disabled = true;
+            addFeed(`Your swimmer taken ${multiplier.toFixed(2)}x`, "red");
+            lastPlayerResult = { mult: multiplier, stake: playerBet.stake, returned: 0, profit: -playerBet.stake, taken: true };
+          }
+          if (!player.bot && player.id !== "you") addFeed(`${player.name} taken ${multiplier.toFixed(2)}x`, "red");
+          playTone(120, .12, "sawtooth", .045);
+          spawnBubble(player.x, player.y, 12, "255,91,102");
+        }
+      });
+    }
+  });
+}
+
+function updateSharkPosition(elapsed) {
+  if (!sharkPath.length) return;
+  let index = 0;
+  for (let i = 0; i < sharkPath.length - 1; i++) {
+    if (elapsed >= sharkPath[i].t && elapsed <= sharkPath[i + 1].t) {
+      index = i;
+      break;
+    }
+  }
+  const p0 = sharkPath[Math.max(0, index - 1)];
+  const a = sharkPath[index];
+  const b = sharkPath[Math.min(sharkPath.length - 1, index + 1)];
+  const p3 = sharkPath[Math.min(sharkPath.length - 1, index + 2)];
+  const span = Math.max(1, b.t - a.t);
+  const k = clamp((elapsed - a.t) / span, 0, 1);
+  const catmull = (v0, v1, v2, v3, t) => .5 * ((2 * v1) + (-v0 + v2) * t + (2 * v0 - 5 * v1 + 4 * v2 - v3) * t * t + (-v0 + 3 * v1 - 3 * v2 + v3) * t * t * t);
+  const oldX = shark.x;
+  const oldY = shark.y;
+  const burst = Math.sin(elapsed * .0048) > .8 ? 10 : 0;
+  shark.x = catmull(p0.x, a.x, b.x, p3.x, k) + Math.sin(tick * .095) * (6 + heat * 11 + burst);
+  shark.y = Math.max(sharkTopLimit(), catmull(p0.y, a.y, b.y, p3.y, k) + Math.cos(tick * .082) * (5 + heat * 8 + burst * .35));
+  shark.a = Math.atan2(shark.y - oldY, shark.x - oldX);
+}
+
+function updateSwimmers() {
+  swimmers.forEach(p => {
+    if (state === "betting" && p.state === "shore" && phaseElapsed() >= p.joinAt) {
+      p.state = "joining";
+      p.progress = 0;
+      pool += p.stake;
+    }
+
+    if (p.state === "joining") {
+      p.progress += p.speed;
+      p.x = lerp(shore * .35, p.tx, clamp(p.progress, 0, 1));
+      p.y = lerp(p.y, p.ty, .04);
+      if (p.progress >= 1) p.state = "swimming";
+    }
+
+    if (p.state !== "spectator") {
+      p.y = Math.max(swimmerTopLimit(), p.y);
+      p.ty = Math.max(swimmerTopLimit(), p.ty);
+    }
+
+    if (p.id !== "you" && p.state === "swimming" && state === "live" && multiplier >= p.cashout) {
+      const labelX = p.x;
+      const labelY = p.y;
+      p.state = "safe";
+      p.flash = 60;
+      p.returnAmount = p.stake * multiplier;
+      const target = beachTarget();
+      Object.assign(p, { tx: target.x, ty: target.y });
+      cashoutEvents.push({ t: performance.now() - liveStartedAt, name: p.name, mult: multiplier, bot: p.bot });
+      addCrowdCashoutLabel(labelX, labelY);
+      if (!p.bot) {
+        addFeed(`${p.name} cashed ${multiplier.toFixed(2)}x`, "green");
+      }
+      spawnBubble(p.x, p.y, 5, "83,225,157");
+    }
+
+    if (p.state === "swimming" && state === "live") {
+      const dx = p.x - shark.x;
+      const dy = p.y - shark.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < sharkCollisionRadius(p)) {
+        p.state = "taken";
+        p.flash = 38;
+        takenEvents.push({ t: performance.now() - liveStartedAt, name: p.name, mult: multiplier, bot: p.bot });
+        if (p.id === "you" && playerBet && !playerBet.done) {
+          playerBet.done = true;
+          ui.cashOut.disabled = true;
+          addFeed(`Your swimmer taken ${multiplier.toFixed(2)}x`, "red");
+          lastPlayerResult = { mult: multiplier, stake: playerBet.stake, returned: 0, profit: -playerBet.stake, taken: true };
+        }
+        if (!p.bot && p.id !== "you") addFeed(`${p.name} taken ${multiplier.toFixed(2)}x`, "red");
+        playTone(110, .12, "sawtooth", .04);
+        spawnBubble(p.x, p.y, 12, "255,91,102");
+      }
+    }
+
+    if (p.state === "safe") {
+      const returnSpeed = state === "resolution" ? .11 : .045;
+      p.x = lerp(p.x, p.tx, returnSpeed);
+      p.y = lerp(p.y, p.ty, returnSpeed);
+    }
+
+    if (p.flash > 0) p.flash--;
+  });
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy -= .004;
+    p.life--;
+  });
+}
+
+function createSweepSharks(targets) {
+  const activeTargets = targets.length ? targets : swimmers.filter(p => p.state === "taken" && p.flash > 0).slice(0, 8);
+  const count = Math.max(8, Math.min(16, Math.ceil(activeTargets.length / 2) + 4));
+  sweepSharks = Array.from({ length: count }, (_, i) => {
+    const target = activeTargets[i % activeTargets.length] || { x: shore + (W - shore) * .58, y: H * .62 };
+    const waterLeft = shore + 84;
+    const waterTop = sharkTopLimit();
+    const side = i % 3;
+    const margin = 120;
+    const start = side === 0
+      ? { x: W + margin, y: target.y + rnd(-70, 70) }
+      : side === 1
+        ? { x: waterLeft + rnd(40, W - waterLeft - 40), y: H + margin }
+        : { x: waterLeft + rnd(40, W - waterLeft - 40), y: waterTop - margin };
+    const end = {
+      x: clamp(target.x + (target.x - start.x) * .65 + rnd(-40, 40), waterLeft, W + margin),
+      y: target.y + (target.y - start.y) * .65 + rnd(-40, 40)
+    };
+    return {
+      x: start.x,
+      y: start.y,
+      a: Math.atan2(target.y - start.y, target.x - start.x),
+      start,
+      target,
+      end,
+      delay: i * 95,
+      duration: rnd(1150, 2100),
+      progress: 0,
+      scale: rnd(.54, .86),
+      phase: rnd(0, 12)
+    };
+  });
+}
+
+function updateSweepSharks() {
+  if (!sweepSharks.length) return;
+  const elapsed = phaseElapsed();
+  sweepSharks.forEach(s => {
+    const p = clamp((elapsed - s.delay) / s.duration, 0, 1);
+    const ease = p * p * (3 - 2 * p);
+    const oldX = s.x;
+    const oldY = s.y;
+    const midX = lerp(s.start.x, s.target.x, ease);
+    const midY = lerp(s.start.y, s.target.y, ease);
+    s.x = clamp(lerp(midX, s.end.x, Math.max(0, ease - .62) * .4) + Math.sin(tick * .12 + s.phase) * 7, shore + 72, W + 140);
+    s.y = Math.max(sharkTopLimit(), lerp(midY, s.end.y, Math.max(0, ease - .62) * .4) + Math.cos(tick * .1 + s.phase) * 5);
+    s.a = Math.atan2(s.y - oldY, s.x - oldX);
+    s.progress = p;
+    if (p > .5 && s.target.state === "doomed") {
+      s.target.state = "taken";
+      s.target.flash = 60;
+      spawnBubble(s.target.x, s.target.y, 16, "255,91,102");
+    }
+  });
+}
+
+function finalStrike(reason) {
+  playMusicSting("strike");
+  const remaining = swimmers.filter(p => p.state === "swimming");
+  remaining.forEach(p => {
+    p.state = "doomed";
+    p.flash = 80;
+    takenEvents.push({ t: performance.now() - liveStartedAt, name: p.name, mult: multiplier, bot: p.bot, final: true });
+  });
+
+  if (playerBet && !playerBet.done) {
+    playerBet.done = true;
+    ui.cashOut.disabled = true;
+    const label = reason === "ceiling" ? "Strike point" : "Time up";
+    addFeed(`${label} - your swimmer taken at ${multiplier.toFixed(2)}x`, "red");
+    lastPlayerResult = { mult: multiplier, stake: playerBet.stake, returned: 0, profit: -playerBet.stake, taken: true };
+  }
+
+  if (remaining.length > 0) {
+    const label = reason === "ceiling" ? "Strike point" : "Time up";
+    addFeed(`${label} - sharks take ${remaining.length} at ${multiplier.toFixed(2)}x`, "red");
+    spawnBubble(shark.x, shark.y, 64, "255,91,102");
+    createSweepSharks(remaining);
+  }
+  startResolution("Final strike");
+}
+function startResolution(reason) {
+  if (state === "resolution") return;
+  setPhase("resolution");
+  if (reason !== "Final strike") playMusicSting("resolution");
+  const toastTitles = {
+    "All swimmers out": "ROUND SETTLED",
+    "Final strike": "SHARK STRIKE"
+  };
+  ui.toastTitle.textContent = toastTitles[reason] || "ROUND SETTLED";
+  ui.toastValue.textContent = multiplier.toFixed(2) + "x";
+  ui.toast.classList.add("show");
+  ui.cashOut.disabled = true;
+  ui.placeBet.disabled = true;
+  ui.markets.forEach(button => button.disabled = true);
+  ui.seed.textContent = seed;
+  ui.ceiling.textContent = ceiling.toFixed(2) + "x";
+  ui.rtp.textContent = (TARGET_RTP * 100).toFixed(2) + "% target";
+  ui.fairPanel.classList.remove("collapsed");
+  ui.fairStatus.textContent = "SEED";
+  resolveMarkets();
+}
+
+function resolveMarkets() {
+  const activeCount = swimmers.filter(p => p.stake > 0 && p.state !== "spectator").length || 1;
+  const safeCount = swimmers.filter(p => p.state === "safe").length;
+  // Panic: 50%+ cash out in any 0.7s window (~30% trigger → 3.21x)
+  const panic = cashoutEvents.some(event => {
+    const inWindow = cashoutEvents.filter(other => Math.abs(other.t - event.t) <= 700).length;
+    return inWindow / activeCount >= .30;
+  });
+  // Hero Exit: any cashout at 3x+ (~30% trigger → 3.19x)
+  const last = cashoutEvents.some(event => event.mult >= 3);
+  // Early Bloodbath: 40%+ taken before 2x.
+  const quick = takenEvents.length / activeCount >= .45;
+  // Clean Escape: ceiling 3x+ AND 45% survive.
+  const clean = ceiling >= 3 && safeCount / activeCount >= .45;
+  marketResults = { panic, last, quick, clean };
+  let marketStakeTotal = 0;
+  let marketReturned = 0;
+  let marketLines = [];
+  Object.entries(marketResults).forEach(([key, won]) => {
+    const button = ui.markets.find(item => item.dataset.market === key);
+    if (button) button.classList.add(won ? "green" : "red");
+    if (marketBets[key]) {
+      const meta = MARKET_META[key];
+      marketStakeTotal += marketBets[key];
+      if (won) {
+        const win = marketBets[key] * meta.odds;
+        marketReturned += win;
+        marketLines.push(`${meta.name}: won ${money(win)}`);
+        balance += win;
+        addFeed(`${meta.name} won ${money(win)}`, "green");
+      } else {
+        marketLines.push(`${meta.name}: lost`);
+        addFeed(`${meta.name} lost`, "red");
+      }
+    }
+  });
+  lastMarketResult = {
+    stake: marketStakeTotal,
+    returned: marketReturned,
+    profit: marketReturned - marketStakeTotal,
+    lines: marketLines
+  };
+  return lastMarketResult;
+}
+
+function placeBet() {
+  if (state !== "betting" || playerBet) return;
+  enableAudio();
+  const stake = clamp(Number(ui.stake.value) || 0, 1, balance);
+  const autoCash = clamp(Number(ui.autoCash.value) || 2, 1.1, 100);
+  balance -= stake;
+  const real = {
+    id: "you",
+    name: "You",
+    bot: false,
+    x: shore * .34,
+    y: H * .58,
+    tx: rnd(shore + 90, W - 90),
+    ty: rnd(swimmerTopLimit(), H * .88),
+    size: .96,
+    state: "joining",
+    progress: 0,
+    speed: .018,
+    cashout: autoCash,
+    stake,
+    returnAmount: 0,
+    flash: 0,
+    phase: rnd(0, 10)
+  };
+  swimmers.push(real);
+  playerBet = { stake, autoCash, done: false, swimmer: real };
+  pool += stake;
+  ui.swimmerDepth.textContent = depthLabel(real.ty);
+  ui.ticketResult.textContent = "Main bet open";
+  ui.placeBet.disabled = true;
+  ui.cashOut.disabled = true;
+  updateControlDeck();
+  if (window.matchMedia("(max-width: 900px)").matches) {
+    setTimeout(() => ui.controlPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  }
+  playTone(440, .08, "triangle", .045);
+}
+
+function cashOut(auto = false) {
+  if (!playerBet || playerBet.done || state !== "live") return;
+  enableAudio();
+  const win = playerBet.stake * multiplier;
+  balance += win;
+  playerBet.done = true;
+  ui.cashOut.disabled = true;
+  if (playerBet.swimmer && playerBet.swimmer.state === "swimming") {
+    const labelX = playerBet.swimmer.x;
+    const labelY = playerBet.swimmer.y;
+    playerBet.swimmer.state = "safe";
+    playerBet.swimmer.flash = 60;
+    const target = beachTarget();
+    playerBet.swimmer.tx = target.x;
+    playerBet.swimmer.ty = target.y;
+    cashoutEvents.push({ t: performance.now() - liveStartedAt, name: "You", mult: multiplier, bot: false });
+    addFloatingLabel(`You cashed ${multiplier.toFixed(2)}x`, labelX, labelY, "green");
+  }
+  addFeed(`You cashed ${multiplier.toFixed(2)}x`, "green");
+  playTone(660, .11, "triangle", .05);
+}
+
+function placeMarket(key) {
+  if (state !== "betting" || marketBets[key]) return;
+  enableAudio();
+  const stake = Math.min(selectedMarketStake, balance);
+  if (stake <= 0) return;
+  balance -= stake;
+  marketBets[key] = stake;
+  const button = ui.markets.find(item => item.dataset.market === key);
+  if (button) button.classList.add("active");
+  const count = Object.keys(marketBets).length;
+  ui.ticketResult.textContent = `${playerBet ? "Main + " : ""}${count} spectator bet${count === 1 ? "" : "s"} open`;
+  updateControlDeck();
+  playTone(520, .06, "sine", .035);
+}
+
+function renderPlayers() {
+  const active = swimmers.filter(p => p.state === "swimming" || p.state === "joining" || p.state === "doomed");
+  const player = active.find(p => p.id === "you");
+  const ranked = active.filter(p => p.id !== "you").sort((a, b) => b.stake - a.stake);
+  const list = [...(player ? [player] : []), ...ranked].slice(0, 12);
+  if (!list.length) {
+    ui.players.innerHTML = `<div class="players-empty">No stakes currently exposed in the water.</div>`;
+    return;
+  }
+  ui.players.innerHTML = list.map(p => {
+    const threat = swimmerThreatState(p);
+    const potential = state === "live" ? p.stake * multiplier : p.stake;
+    return `<div class="player-row${p.id === "you" ? " gold" : ""}"><span>${p.name}</span><small class="player-stake">${money(p.stake)}</small><small class="player-return">${money(potential)}</small><b class="player-threat ${threat.cls}">${threat.label}</b></div>`;
+  }).join("");
+}
+
+function updateUi() {
+  const alive = swimmers.filter(p => p.state === "swimming" || p.state === "joining" || p.state === "doomed").length;
+  const cashed = swimmers.filter(p => p.state === "safe").length;
+  const taken = swimmers.filter(p => p.state === "taken" || p.state === "doomed").length;
+  const spectators = swimmers.filter(p => p.state === "spectator" || p.state === "shore").length;
+  const total = swimmers.filter(p => p.state !== "spectator" && p.state !== "shore").length || 1;
+  const all = Math.max(1, swimmers.length);
+  const waterDeg = alive / all * 360;
+  const safeDeg = cashed / all * 360;
+  const takenDeg = taken / all * 360;
+  const elapsed = state === "live" ? performance.now() - liveStartedAt : phaseElapsed();
+  const phaseLength = state === "betting" ? PHASE_MS.betting : state === "locked" ? PHASE_MS.locked : state === "resolution" ? PHASE_MS.resolution : liveDuration;
+  const remain = Math.max(0, (phaseLength - elapsed) / 1000);
+  ui.multiplier.textContent = multiplier.toFixed(2) + "x";
+  ui.multiplier.style.color = heat > .72 ? "var(--red)" : heat > .38 ? "var(--gold)" : "var(--green)";
+  const exposedStake = swimmers
+    .filter(p => p.state === "swimming" || p.state === "joining" || p.state === "doomed")
+    .reduce((sum, p) => sum + p.stake, 0);
+  ui.round.textContent = `${money(exposedStake)} IN WATER`;
+  ui.phase.textContent = state.toUpperCase();
+  ui.alive.textContent = alive;
+  ui.pool.textContent = money(pool);
+  ui.timerLabel.textContent = state === "live" ? "Elapsed" : "Timer";
+  ui.timer.textContent = state === "live" ? (elapsed / 1000).toFixed(1) + "s" : remain.toFixed(1) + "s";
+  if (ui.deckTimer) ui.deckTimer.textContent = state === "live" ? multiplier.toFixed(2) + "x" : remain.toFixed(1) + "s";
+  ui.timer.style.color = state === "live" && heat > .55 ? "var(--red)" : "var(--text)";
+  ui.balance.textContent = money(balance);
+  ui.returnValue.textContent = playerBet && !playerBet.done ? money(playerBet.stake * multiplier) : "$0";
+  ui.cashOut.disabled = !(state === "live" && playerBet && !playerBet.done && playerBet.swimmer?.state === "swimming");
+  ui.cashed.textContent = `${cashed}/${total} CASHED`;
+  ui.statusDonut.dataset.total = swimmers.length.toLocaleString();
+  ui.statusDonut.style.background = `conic-gradient(var(--cyan) 0deg ${waterDeg}deg, var(--green) ${waterDeg}deg ${waterDeg + safeDeg}deg, var(--red) ${waterDeg + safeDeg}deg ${waterDeg + safeDeg + takenDeg}deg, rgba(139,205,218,.18) ${waterDeg + safeDeg + takenDeg}deg 360deg)`;
+  [alive, cashed, taken, spectators].forEach((value, index) => {
+    if (ui.roundStatusSegments[index]) ui.roundStatusSegments[index].style.width = `${value / all * 100}%`;
+  });
+  ui.waterCount.textContent = alive.toLocaleString();
+  ui.safeCount.textContent = cashed.toLocaleString();
+  ui.takenCount.textContent = taken.toLocaleString();
+  ui.spectatorCount.textContent = spectators.toLocaleString();
+  updateControlDeck();
+  if (tick % 10 === 0) renderPlayers();
+}
+
+function frame(now = performance.now()) {
+  const dt = Math.min(48, now - lastFrameAt);
+  lastFrameAt = now;
+  tick++;
+  updateAudioPulse(now);
+  updateRound();
+  updateSwimmers();
+  updateParticles();
+  updateFloatingLabels();
+  updatePlayerThreat();
+
+  ctx.clearRect(0, 0, W, H);
+  drawStageBackground();
+  drawParticles();
+  ctx.save();
+  if (mobileHudBottom) {
+    ctx.beginPath();
+    ctx.rect(0, mobileHudBottom, W, H - mobileHudBottom);
+    ctx.clip();
+  }
+  swimmers.forEach(p => {
+    if (p.state !== "taken" || p.flash > 0) drawHuman(p);
+  });
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(shore + 10, 0, W - shore - 10, H);
+  ctx.clip();
+  if (state === "live" || state === "resolution") drawShark();
+  drawSecondarySharks();
+  drawSweepSharks();
+  ctx.restore();
+  ctx.restore();
+  drawFloatingLabels();
+
+  ctx.save();
+  ctx.fillStyle = `rgba(255, 20, 35, ${heat * .11})`;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  updateUi();
+  requestAnimationFrame(frame);
+}
+
+// ── New state vars ─────────────────────────────────────────────────────────────
+let roundHistory = [];
+let houseGGR = 0;
+let lastPlayerResult = null;
+
+const _origResetRoundForTickets = resetRound;
+resetRound = function() {
+  lastPlayerResult = null;
+  lastMarketResult = null;
+  _origResetRoundForTickets();
+};
+
+// ── Auto cashout toggle ────────────────────────────────────────────────────────
+const autoCashEnabled = document.getElementById('autoCashEnabled');
+const autoCashInput   = document.getElementById('autoCash');
+autoCashEnabled.addEventListener('change', () => {
+  autoCashInput.disabled = !autoCashEnabled.checked;
+  autoCashInput.style.opacity = autoCashEnabled.checked ? '1' : '.4';
+});
+
+// ── Round history strip ────────────────────────────────────────────────────────
+function renderRoundHistory() {
+  const el = document.getElementById('roundHistory');
+  if (!el) return;
+  el.innerHTML = roundHistory.map(m => {
+    const cls = m >= 10 ? 'rh-moon' : m >= 3 ? 'rh-high' : m >= 1.5 ? 'rh-mid' : 'rh-low';
+    return `<div class="rh-pill ${cls}">${m.toFixed(2)}x</div>`;
+  }).join('');
+
+  while (el.scrollHeight > el.clientHeight + 1 && roundHistory.length > 1) {
+    roundHistory.pop();
+    el.lastElementChild?.remove();
+  }
+}
+
+function addRoundHistory(mult) {
+  roundHistory.unshift(mult);
+  if (roundHistory.length > 30) roundHistory.pop();
+  renderRoundHistory();
+}
+
+// ── Cap floating labels at 8 ───────────────────────────────────────────────────
+const _origAddFloating = addFloatingLabel;
+function addFloatingLabel(text, x, y, cls) {
+  if (floatingLabels.length >= 4) floatingLabels.shift();
+  floatingLabels.push({ text, x, y: y - 22, vy: -.35, life: 60, max: 60, cls });
+}
+
+// ── GGR tracking ──────────────────────────────────────────────────────────────
+function calcRoundGGR() {
+  const totalStaked = swimmers.filter(p => p.stake > 0 && p.state !== 'spectator' && p.state !== 'shore').reduce((s, p) => s + p.stake, 0);
+  const totalReturned = swimmers.filter(p => p.state === 'safe').reduce((s, p) => s + (p.returnAmount || p.stake * (p.cashout || multiplier)), 0);
+  return totalStaked - totalReturned;
+}
+
+// ── Result card ────────────────────────────────────────────────────────────────
+function showResultCard(result) {
+  const card = document.getElementById('resultCard');
+  if (!card) return;
+  const won = result.profit > 0;
+  const noTicket = result.kind === 'none';
+  document.getElementById('resultTitle').textContent = result.title || (result.taken ? 'TAKEN' : 'CASHED OUT');
+  const multEl = document.getElementById('resultMult');
+  multEl.textContent = result.mult ? result.mult.toFixed(2) + 'x' : 'WATCH';
+  multEl.className = result.taken || result.profit < 0 ? 'result-mult red-mult' : 'result-mult';
+  document.getElementById('resultStake').textContent = money(result.stake);
+  document.getElementById('resultReturn').textContent = money(result.returned);
+  document.getElementById('resultReturn').className = won ? 'green' : noTicket ? '' : 'red';
+  document.getElementById('resultProfit').textContent = signedMoney(result.profit);
+  document.getElementById('resultProfit').className = won ? 'green' : noTicket ? '' : 'red';
+  const hist = document.getElementById('resultHistory');
+  if (hist) {
+    const lines = result.lines && result.lines.length
+      ? result.lines.map(line => `<div class="rh-pill rh-mid">${line}</div>`)
+      : roundHistory.slice(0, 10).map(m => {
+          const cls = m >= 10 ? 'rh-moon' : m >= 3 ? 'rh-high' : m >= 1.5 ? 'rh-mid' : 'rh-low';
+          return `<div class="rh-pill ${cls}">${m.toFixed(2)}x</div>`;
+        });
+    hist.innerHTML = lines.join('');
+  }
+  card.classList.add('show');
+}
+
+document.getElementById('resultClose').addEventListener('click', () => {
+  lastPlayerResult = null;
+  lastMarketResult = null;
+  document.getElementById('resultCard').classList.remove('show');
+});
+
+// ── Mobile cash out bar ────────────────────────────────────────────────────────
+const mobileCashBtn = document.getElementById('mobileCashBtn');
+const mobileMult    = document.getElementById('mobileMult');
+mobileCashBtn.addEventListener('click', () => cashOut(false));
+
+// ── Patch cashOut to record result and show card ───────────────────────────────
+const _origCashOut = cashOut;
+cashOut = function(auto = false) {
+  if (!playerBet || playerBet.done || state !== 'live') return;
+  enableAudio();
+  const win   = playerBet.stake * multiplier;
+  const profit = win - playerBet.stake;
+  balance += win;
+  playerBet.done = true;
+  ui.cashOut.disabled    = true;
+  mobileCashBtn.disabled = true;
+  if (playerBet.swimmer && playerBet.swimmer.state === 'swimming') {
+    const labelX = playerBet.swimmer.x;
+    const labelY = playerBet.swimmer.y;
+    playerBet.swimmer.state    = 'safe';
+    playerBet.swimmer.flash    = 60;
+    const target = beachTarget();
+    playerBet.swimmer.tx       = target.x;
+    playerBet.swimmer.ty       = target.y;
+    playerBet.swimmer.returnAmount = win;
+    cashoutEvents.push({ t: performance.now() - liveStartedAt, name: 'You', mult: multiplier, bot: false });
+    addFloatingLabel(`You cashed ${multiplier.toFixed(2)}x`, labelX, labelY, 'green');
+  }
+  addFeed(`You cashed ${multiplier.toFixed(2)}x`, 'green');
+  playTone(660, .11, 'triangle', .05);
+  lastPlayerResult = { mult: multiplier, stake: playerBet.stake, returned: win, profit, taken: false };
+};
+
+// ── finalStrike patch removed: function now handles all result recording internally ──
+
+// ── Patch startResolution to update GGR, history and show result card ─────────
+const _origStartResolution = startResolution;
+startResolution = function(reason) {
+  addRoundHistory(multiplier);
+  _origStartResolution(reason);
+  const marketResult = lastMarketResult && lastMarketResult.stake > 0 ? lastMarketResult : null;
+  let result = null;
+  if (lastPlayerResult && marketResult) {
+    result = {
+      title: 'TICKET SETTLED',
+      mult: lastPlayerResult.mult,
+      stake: lastPlayerResult.stake + marketResult.stake,
+      returned: lastPlayerResult.returned + marketResult.returned,
+      profit: lastPlayerResult.profit + marketResult.profit,
+      taken: lastPlayerResult.taken && marketResult.profit <= 0,
+      lines: [
+        `Main bet: ${lastPlayerResult.taken ? 'taken' : 'cashed ' + lastPlayerResult.mult.toFixed(2) + 'x'}`,
+        ...marketResult.lines
+      ]
+    };
+  } else if (lastPlayerResult) {
+    result = { title: lastPlayerResult.taken ? 'MAIN BET LOST' : 'MAIN BET WON', ...lastPlayerResult };
+  } else if (marketResult) {
+    result = {
+      title: marketResult.profit > 0 ? 'SPECTATOR BET WON' : 'SPECTATOR BET LOST',
+      kind: 'market',
+      mult: multiplier,
+      stake: marketResult.stake,
+      returned: marketResult.returned,
+      profit: marketResult.profit,
+      taken: marketResult.profit < 0,
+      lines: marketResult.lines
+    };
+  } else {
+    result = {
+      title: 'NO BET PLACED',
+      kind: 'none',
+      mult: multiplier,
+      stake: 0,
+      returned: 0,
+      profit: 0,
+      taken: false,
+      lines: ['You watched this round without an open ticket']
+    };
+  }
+  houseGGR += result.stake - result.returned;
+  lastPlayerResult = null;
+  lastMarketResult = null;
+  ui.ticketResult.textContent = result.title;
+  setTimeout(() => showResultCard(result), RESULT_CARD_DELAY_MS);
+};
+
+// ── Widen bot cashout variance ─────────────────────────────────────────────────
+const _origSampleBot = sampleBotCashout;
+sampleBotCashout = function(rng) {
+  const roll = rng();
+  // Extra tail — 8% hold very long, 5% exit extremely early
+  if (roll < .025) return rngBetween(rng, 1.05, 1.15);
+  if (roll > .75) {
+    const low = Math.min(ceiling * 1.02, 90);
+    const high = Math.min(Math.max(ceiling * 1.35, ceiling + .15), 120);
+    return rngBetween(rng, low, high);
+  }
+  return _origSampleBot(rng);
+};
+
+// ── updateUi patches — GGR display + mobile cashout ───────────────────────────
+const _origUpdateUi = updateUi;
+updateUi = function() {
+  _origUpdateUi();
+  // GGR
+  document.getElementById('pool').textContent = money(houseGGR);
+  // Mobile cash out button
+  if (mobileMult) mobileMult.textContent = multiplier.toFixed(2) + 'x';
+  if (mobileCashBtn) {
+    mobileCashBtn.disabled = !(state === 'live' && playerBet && !playerBet.done && playerBet.swimmer?.state === 'swimming');
+  }
+};
+
+// ── Auto cashout hook — respect toggle ────────────────────────────────────────
+const _origUpdateRound = updateRound;
+updateRound = function() {
+  if (!tutSeen) return; // freeze round until tutorial dismissed
+  _origUpdateRound();
+};
+// Override auto cashout trigger inside live phase
+const _origFrame = frame;
+// Patch the auto cashout line inside the live block
+// We override by intercepting updateRound — simpler: wrap the autoCash check
+const __liveAutoCheck = setInterval(() => {
+  if (state === 'live' && playerBet && !playerBet.done && autoCashEnabled.checked) {
+    const autoCash = clamp(Number(autoCashInput.value) || 2, 1.1, 100);
+    if (multiplier >= autoCash) cashOut(true);
+  }
+}, 50);
+
+ui.placeBet.addEventListener("click", placeBet);
+ui.cashOut.addEventListener("click", () => cashOut(false));
+ui.crowdToggle.addEventListener("click", () => {
+  if (state !== "betting") return;
+  crowdBetsManualOpen = !crowdBetsManualOpen;
+  updateControlDeck();
+});
+ui.markets.forEach(button => button.addEventListener("click", () => placeMarket(button.dataset.market)));
+ui.marketChips.forEach(button => button.addEventListener("click", () => {
+  selectedMarketStake = Number(button.dataset.stake) || 25;
+  ui.marketChips.forEach(chip => chip.classList.toggle("active", chip === button));
+  if (ui.marketStake) ui.marketStake.textContent = money(selectedMarketStake);
+  ui.marketStakeInput.value = selectedMarketStake;
+  enableAudio();
+  playTone(390, .045, "sine", .025);
+}));
+ui.marketStakeInput.addEventListener("change", () => {
+  selectedMarketStake = clamp(Number(ui.marketStakeInput.value) || 25, 1, 5000);
+  ui.marketStakeInput.value = selectedMarketStake;
+  if (ui.marketStake) ui.marketStake.textContent = money(selectedMarketStake);
+  ui.marketChips.forEach(chip => chip.classList.toggle("active", Number(chip.dataset.stake) === selectedMarketStake));
+});
+ui.playerCount.addEventListener("change", resetRound);
+
+function updateSoundUi() {
+  ui.soundToggle.classList.toggle("muted", !soundEnabled);
+  ui.soundToggle.innerHTML = soundEnabled ? "&#128266;" : "&#128263;";
+  ui.soundToggle.setAttribute("aria-label", soundEnabled ? "Mute sound" : "Enable sound");
+  ui.musicVolumeOut.textContent = ui.musicVolume.value + "%";
+  ui.effectsVolumeOut.textContent = ui.effectsVolume.value + "%";
+}
+
+function saveSoundPreferences() {
+  localStorage.setItem("shoreSoundEnabled", soundEnabled ? "1" : "0");
+  localStorage.setItem("shoreMusicVolume", ui.musicVolume.value);
+  localStorage.setItem("shoreEffectsVolume", ui.effectsVolume.value);
+}
+
+function setSoundEnabled(enabled) {
+  soundEnabled = enabled;
+  if (soundEnabled) enableAudio();
+  if (masterGain && audioCtx) masterGain.gain.setTargetAtTime(soundEnabled ? .82 : .0001, audioCtx.currentTime, .06);
+  nextPulseAt = 0;
+  updateSoundUi();
+  saveSoundPreferences();
+}
+
+ui.soundToggle.addEventListener("click", event => {
+  event.stopPropagation();
+  setSoundEnabled(!soundEnabled);
+});
+ui.soundSettings.addEventListener("click", event => {
+  event.stopPropagation();
+  ui.soundMenu.classList.toggle("open");
+});
+ui.soundMenu.addEventListener("click", event => event.stopPropagation());
+document.addEventListener("click", () => ui.soundMenu.classList.remove("open"));
+ui.musicVolume.addEventListener("input", () => {
+  ui.musicVolumeOut.textContent = ui.musicVolume.value + "%";
+  if (musicGain && audioCtx) musicGain.gain.setTargetAtTime(Number(ui.musicVolume.value) / 100, audioCtx.currentTime, .06);
+  saveSoundPreferences();
+});
+ui.effectsVolume.addEventListener("input", () => {
+  ui.effectsVolumeOut.textContent = ui.effectsVolume.value + "%";
+  if (effectsGain && audioCtx) effectsGain.gain.setTargetAtTime(Number(ui.effectsVolume.value) / 100, audioCtx.currentTime, .06);
+  saveSoundPreferences();
+});
+ui.soundMenu.insertAdjacentHTML("beforeend", '<button id="muteSound" type="button">Mute All Sound</button>');
+document.getElementById("muteSound").addEventListener("click", () => {
+  setSoundEnabled(false);
+  ui.soundMenu.classList.remove("open");
+});
+
+ui.musicVolume.value = localStorage.getItem("shoreMusicVolume") || "35";
+ui.effectsVolume.value = localStorage.getItem("shoreEffectsVolume") || "55";
+soundEnabled = localStorage.getItem("shoreSoundEnabled") === "1";
+updateSoundUi();
+
+window.addEventListener("resize", () => {
+  resize();
+  renderRoundHistory();
+});
+
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    this.beginPath();
+    this.moveTo(x + radius, y);
+    this.arcTo(x + w, y, x + w, y + h, radius);
+    this.arcTo(x + w, y + h, x, y + h, radius);
+    this.arcTo(x, y + h, x, y, radius);
+    this.arcTo(x, y, x + w, y, radius);
+    this.closePath();
+    return this;
+  };
+}
+
+resize();
+resetRound();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
