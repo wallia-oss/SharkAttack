@@ -2044,6 +2044,12 @@ const ui = {
 
 let W = 900;
 let H = 560;
+let lastStageW = W;
+let lastStageH = H;
+let lastSwimmerTopLimit = 0;
+let lastSwimmerBottomLimit = 0;
+let lastSharkTopLimit = 0;
+let lastSharkBottomLimit = 0;
 let DPR = 1;
 let shore = 92;
 let mobileHudBottom = 0;
@@ -2129,6 +2135,13 @@ function signedMoney(value) {
 
 function resize() {
   const rect = canvas.parentElement.getBoundingClientRect();
+  const prevW = W;
+  const prevH = H;
+  const prevHudBottom = mobileHudBottom;
+  const prevSwimmerTop = lastSwimmerTopLimit || swimmerTopLimit();
+  const prevSwimmerBottom = lastSwimmerBottomLimit || swimmerBottomLimit();
+  const prevSharkTop = lastSharkTopLimit || sharkTopLimit();
+  const prevSharkBottom = lastSharkBottomLimit || sharkBottomLimit();
   DPR = Math.min(2, window.devicePixelRatio || 1);
   W = Math.max(320, Math.floor(rect.width));
   H = Math.max(500, Math.floor(rect.height));
@@ -2144,6 +2157,64 @@ function resize() {
   } else {
     mobileHudBottom = 0;
   }
+  if (prevW && prevH && (Math.abs(prevW - W) > 1 || Math.abs(prevH - H) > 1)) {
+    remapStageActors(prevW, prevH, W, H, {
+      hudBottom: prevHudBottom,
+      swimmerTop: prevSwimmerTop,
+      swimmerBottom: prevSwimmerBottom,
+      sharkTop: prevSharkTop,
+      sharkBottom: prevSharkBottom
+    });
+  }
+  lastStageW = W;
+  lastStageH = H;
+  lastSwimmerTopLimit = swimmerTopLimit();
+  lastSwimmerBottomLimit = swimmerBottomLimit();
+  lastSharkTopLimit = sharkTopLimit();
+  lastSharkBottomLimit = sharkBottomLimit();
+}
+
+function remapRange(value, oldMin, oldMax, newMin, newMax) {
+  const oldSpan = Math.max(1, oldMax - oldMin);
+  const t = clamp((value - oldMin) / oldSpan, 0, 1);
+  return lerp(newMin, newMax, t);
+}
+
+function remapStageActors(prevW, prevH, nextW, nextH, prevLimits) {
+  const sx = nextW / prevW;
+  const scalePoint = point => {
+    if (!point) return;
+    point.x = clamp(point.x * sx, 0, nextW);
+    point.y = clamp(point.y * (nextH / prevH), 0, nextH);
+  };
+  const mapSwimmerY = y => remapRange(y, prevLimits.swimmerTop, prevLimits.swimmerBottom, swimmerTopLimit(), swimmerBottomLimit());
+  const mapSharkY = y => remapRange(y, prevLimits.sharkTop, prevLimits.sharkBottom, sharkTopLimit(), sharkBottomLimit());
+  const scaleSwimmerPoint = point => {
+    if (!point) return;
+    point.x = clamp(point.x * sx, 0, nextW);
+    point.y = mapSwimmerY(point.y);
+  };
+  const scaleSharkPoint = point => {
+    if (!point) return;
+    point.x = clamp(point.x * sx, 0, nextW);
+    point.y = mapSharkY(point.y);
+  };
+  swimmers.forEach(p => {
+    scaleSwimmerPoint(p);
+    if (Number.isFinite(p.tx)) p.tx = clamp(p.tx * sx, 0, nextW);
+    if (Number.isFinite(p.ty)) p.ty = mapSwimmerY(p.ty);
+  });
+  scaleSharkPoint(shark);
+  sharkPath.forEach(scaleSharkPoint);
+  secondaryPasses.forEach(pass => {
+    scaleSharkPoint(pass.start);
+    scaleSharkPoint(pass.target);
+    scaleSharkPoint(pass.end);
+  });
+  secondarySharks.forEach(scaleSharkPoint);
+  sweepSharks.forEach(scaleSharkPoint);
+  particles.forEach(scalePoint);
+  floatingLabels.forEach(scalePoint);
 }
 
 function swimmerTopLimit() {
@@ -2152,7 +2223,7 @@ function swimmerTopLimit() {
 
 function swimmerBottomLimit() {
   if (!mobileHudBottom) return H * .91;
-  const bottomInset = state === "live" ? 154 : 76;
+  const bottomInset = state === "live" ? 92 : 64;
   return Math.max(swimmerTopLimit() + 110, H - bottomInset);
 }
 
@@ -2162,7 +2233,7 @@ function sharkTopLimit() {
 
 function sharkBottomLimit() {
   if (!mobileHudBottom) return H * .9;
-  const bottomInset = state === "live" ? 156 : 92;
+  const bottomInset = state === "live" ? 132 : 82;
   return Math.max(sharkTopLimit() + 130, H - bottomInset);
 }
 
@@ -4038,6 +4109,14 @@ window.addEventListener("resize", () => {
   resize();
   renderRoundHistory();
 });
+
+if ("ResizeObserver" in window) {
+  const stageObserver = new ResizeObserver(() => {
+    resize();
+    renderRoundHistory();
+  });
+  stageObserver.observe(canvas.parentElement);
+}
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
