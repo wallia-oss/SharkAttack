@@ -1397,7 +1397,7 @@
       scroll-margin-top: max(62px, calc(env(safe-area-inset-top) + 14px));
     }
     .topbar {
-      top: clamp(42px, 6svh, 54px);
+      top: clamp(22px, 3.8svh, 34px);
       left: 6px;
       right: auto;
       width: 108px;
@@ -1414,7 +1414,7 @@
     .multiplier .label { font-size: 7px; }
     .multiplier .value { font-size: 29px; }
     .threat-banner {
-      top: clamp(42px, 6svh, 54px);
+      top: clamp(22px, 3.8svh, 34px);
       left: 120px;
       right: 6px;
       min-width: 0;
@@ -2153,7 +2153,7 @@ function resize() {
   if (window.matchMedia("(max-width: 900px)").matches) {
     const multiplierRect = ui.multiplier.closest(".multiplier").getBoundingClientRect();
     const threatRect = ui.stageThreat.getBoundingClientRect();
-    mobileHudBottom = Math.max(multiplierRect.bottom, threatRect.bottom) - rect.top + 6;
+    mobileHudBottom = Math.max(multiplierRect.bottom, threatRect.bottom) - rect.top + 2;
   } else {
     mobileHudBottom = 0;
   }
@@ -2218,7 +2218,7 @@ function remapStageActors(prevW, prevH, nextW, nextH, prevLimits) {
 }
 
 function swimmerTopLimit() {
-  return mobileHudBottom ? mobileHudBottom + 28 : H * .13;
+  return mobileHudBottom ? mobileHudBottom + 14 : H * .13;
 }
 
 function swimmerBottomLimit() {
@@ -2228,7 +2228,7 @@ function swimmerBottomLimit() {
 }
 
 function sharkTopLimit() {
-  return mobileHudBottom ? mobileHudBottom + 96 : H * .1;
+  return mobileHudBottom ? mobileHudBottom + 62 : H * .1;
 }
 
 function sharkBottomLimit() {
